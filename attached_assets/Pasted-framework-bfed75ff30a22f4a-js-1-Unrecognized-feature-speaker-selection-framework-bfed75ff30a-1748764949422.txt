@@ -1,0 +1,42 @@
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+framework-bfed75ff30a22f4a.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this warning
+analytics.tiktok.com/i18n/pixel/events.js?sdkid=D004GE3C77U8PIVDSDJG&lib=ttq:1 
+            
+            
+           Failed to load resource: net::ERR_CONNECTION_TIMED_OUTUnderstand this error
+StartupPulse:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+framework-bfed75ff30a22f4a.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this error
+framework-bfed75ff30a22f4a.js:1 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+_ @ framework-bfed75ff30a22f4a.js:1Understand this error
+workspace_iframe.html:32 Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.

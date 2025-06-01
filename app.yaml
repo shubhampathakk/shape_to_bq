@@ -1,0 +1,40 @@
+runtime: nodejs20
+service: shapefile-bigquery
+
+env_variables:
+  NODE_ENV: production
+  PORT: 8080
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 10
+  target_cpu_utilization: 0.6
+
+# Enable Cloud Storage for file uploads
+resources:
+  cpu: 1
+  memory_gb: 2
+  disk_size_gb: 10
+
+# Allow larger file uploads for shapefiles
+handlers:
+- url: /api/.*
+  script: auto
+  secure: always
+  
+- url: /.*
+  static_files: client/dist/\1
+  upload: client/dist/(.*)
+  secure: always
+  fallthrough_to_runtime: true
+
+skip_files:
+- ^(.*/)?#.*#$
+- ^(.*/)?.*~$
+- ^(.*/)?.*\.py[co]$
+- ^(.*/)?.*/RCS/.*$
+- ^(.*/)?\..*$
+- ^(.*/)?node_modules/.*$
+- ^(.*/)?uploads/.*$
+- ^(.*/)?client/src/.*$
+- ^(.*/)?\.env.*$
