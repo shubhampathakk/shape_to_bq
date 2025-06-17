@@ -178,37 +178,37 @@ const MainDashboard: React.FC = () => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6" data-id="x94r4ssqz" data-path="src/components/dashboard/MainDashboard.tsx">
+    <div className="max-w-7xl mx-auto p-6 space-y-6" data-id="0v7tpcibo" data-path="src/components/dashboard/MainDashboard.tsx">
       {/* Header */}
-      <div className="text-center space-y-2" data-id="dmkuz4ua0" data-path="src/components/dashboard/MainDashboard.tsx">
-        <h1 className="text-3xl font-bold text-gray-900" data-id="dx858s21d" data-path="src/components/dashboard/MainDashboard.tsx">
+      <div className="text-center space-y-2" data-id="zqs5aky2t" data-path="src/components/dashboard/MainDashboard.tsx">
+        <h1 className="text-3xl font-bold text-gray-900" data-id="tu62z776a" data-path="src/components/dashboard/MainDashboard.tsx">
           Geospatial Data Processing
         </h1>
-        <p className="text-gray-600" data-id="pq73sgg0a" data-path="src/components/dashboard/MainDashboard.tsx">
+        <p className="text-gray-600" data-id="5mk7w3lvd" data-path="src/components/dashboard/MainDashboard.tsx">
           Upload shapefiles and seamlessly load them into Google BigQuery
         </p>
       </div>
 
       {/* Environment Status Alert */}
-      <Alert className={`border-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-200 bg-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-50`} data-id="a6z14yyxw" data-path="src/components/dashboard/MainDashboard.tsx">
+      <Alert className={`border-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-200 bg-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-50`} data-id="zj5mza0h3" data-path="src/components/dashboard/MainDashboard.tsx">
         {envInfo.realProcessingEnabled ?
-        <CheckCircle className="h-4 w-4 text-green-600" data-id="f62lxchho" data-path="src/components/dashboard/MainDashboard.tsx" /> :
+        <CheckCircle className="h-4 w-4 text-green-600" data-id="cbwxl2g09" data-path="src/components/dashboard/MainDashboard.tsx" /> :
 
-        <Info className="h-4 w-4 text-amber-600" data-id="rrbopz19i" data-path="src/components/dashboard/MainDashboard.tsx" />
+        <Info className="h-4 w-4 text-amber-600" data-id="efpwuletb" data-path="src/components/dashboard/MainDashboard.tsx" />
         }
-        <AlertDescription className={`text-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-800`} data-id="r34ov0r7e" data-path="src/components/dashboard/MainDashboard.tsx">
-          <strong data-id="e8jrvsylw" data-path="src/components/dashboard/MainDashboard.tsx">{envInfo.realProcessingEnabled ? 'Production Mode:' : 'Demo Mode:'}</strong>{' '}
+        <AlertDescription className={`text-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-800`} data-id="smeukuatb" data-path="src/components/dashboard/MainDashboard.tsx">
+          <strong data-id="lc5qopgoi" data-path="src/components/dashboard/MainDashboard.tsx">{envInfo.realProcessingEnabled ? 'Production Mode:' : 'Demo Mode:'}</strong>{' '}
           {envInfo.realProcessingEnabled ?
           'Real data processing is enabled. Jobs will load data to BigQuery.' :
 
           'Jobs will simulate the processing pipeline. Configure production settings to load real data.'
           }
           {envInfo.configErrors.length > 0 &&
-          <div className="mt-2" data-id="v8cn6xu2t" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="font-medium" data-id="vr0w9gtto" data-path="src/components/dashboard/MainDashboard.tsx">Configuration issues:</p>
-              <ul className="list-disc list-inside text-sm" data-id="r6p970acq" data-path="src/components/dashboard/MainDashboard.tsx">
+          <div className="mt-2" data-id="n9g0pmoi2" data-path="src/components/dashboard/MainDashboard.tsx">
+              <p className="font-medium" data-id="tehdlbgby" data-path="src/components/dashboard/MainDashboard.tsx">Configuration issues:</p>
+              <ul className="list-disc list-inside text-sm" data-id="y1co8j195" data-path="src/components/dashboard/MainDashboard.tsx">
                 {envInfo.configErrors.map((error, index) =>
-              <li key={index} data-id="q9rcrivs4" data-path="src/components/dashboard/MainDashboard.tsx">{error}</li>
+              <li key={index} data-id="6nd1aigvy" data-path="src/components/dashboard/MainDashboard.tsx">{error}</li>
               )}
               </ul>
             </div>
@@ -217,39 +217,39 @@ const MainDashboard: React.FC = () => {
       </Alert>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-id="ge0yvcmcz" data-path="src/components/dashboard/MainDashboard.tsx">
-        <Card data-id="qc0h11vg5" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="kvgzx45kw" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-blue-100 rounded-full" data-id="pvhzioemo" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Database className="h-5 w-5 text-blue-600" data-id="kqrgauvr0" data-path="src/components/dashboard/MainDashboard.tsx" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-id="adj041l6s" data-path="src/components/dashboard/MainDashboard.tsx">
+        <Card data-id="jrtb281jf" data-path="src/components/dashboard/MainDashboard.tsx">
+          <CardContent className="p-4 flex items-center space-x-3" data-id="kj7j6w1c2" data-path="src/components/dashboard/MainDashboard.tsx">
+            <div className="p-2 bg-blue-100 rounded-full" data-id="my6n07095" data-path="src/components/dashboard/MainDashboard.tsx">
+              <Database className="h-5 w-5 text-blue-600" data-id="15xwcofr3" data-path="src/components/dashboard/MainDashboard.tsx" />
             </div>
-            <div data-id="wodli5et1" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="8kw3rrk1o" data-path="src/components/dashboard/MainDashboard.tsx">Total Jobs</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="vj1n64l8y" data-path="src/components/dashboard/MainDashboard.tsx">{jobs.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-id="4v89xrz8f" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="pqwxsfo1h" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-yellow-100 rounded-full" data-id="iehadu74a" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Zap className="h-5 w-5 text-yellow-600" data-id="w1k1r5drb" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </div>
-            <div data-id="q061sklrv" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="y531py2u8" data-path="src/components/dashboard/MainDashboard.tsx">Running</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="yaqhe5oj9" data-path="src/components/dashboard/MainDashboard.tsx">{runningJobs.length}</p>
+            <div data-id="g78s42oq3" data-path="src/components/dashboard/MainDashboard.tsx">
+              <p className="text-sm text-gray-600" data-id="yvbonis1m" data-path="src/components/dashboard/MainDashboard.tsx">Total Jobs</p>
+              <p className="text-2xl font-bold text-gray-900" data-id="hq0z7uziq" data-path="src/components/dashboard/MainDashboard.tsx">{jobs.length}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card data-id="znjxlr5k7" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="pdgakc4ga" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-green-100 rounded-full" data-id="vtnnz2cxg" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Upload className="h-5 w-5 text-green-600" data-id="n71mect8d" data-path="src/components/dashboard/MainDashboard.tsx" />
+        <Card data-id="r74o2tl5g" data-path="src/components/dashboard/MainDashboard.tsx">
+          <CardContent className="p-4 flex items-center space-x-3" data-id="vmafcf5z2" data-path="src/components/dashboard/MainDashboard.tsx">
+            <div className="p-2 bg-yellow-100 rounded-full" data-id="9lrupg5ep" data-path="src/components/dashboard/MainDashboard.tsx">
+              <Zap className="h-5 w-5 text-yellow-600" data-id="pzsyppm68" data-path="src/components/dashboard/MainDashboard.tsx" />
             </div>
-            <div data-id="9lzfjc8f3" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="xy8wt2ya8" data-path="src/components/dashboard/MainDashboard.tsx">Completed</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="xj6jud6k2" data-path="src/components/dashboard/MainDashboard.tsx">
+            <div data-id="lrmlj40dy" data-path="src/components/dashboard/MainDashboard.tsx">
+              <p className="text-sm text-gray-600" data-id="1j3xdwx75" data-path="src/components/dashboard/MainDashboard.tsx">Running</p>
+              <p className="text-2xl font-bold text-gray-900" data-id="ahb4hsfk4" data-path="src/components/dashboard/MainDashboard.tsx">{runningJobs.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card data-id="yika8cce4" data-path="src/components/dashboard/MainDashboard.tsx">
+          <CardContent className="p-4 flex items-center space-x-3" data-id="x5s6uopqb" data-path="src/components/dashboard/MainDashboard.tsx">
+            <div className="p-2 bg-green-100 rounded-full" data-id="kfj1nmedj" data-path="src/components/dashboard/MainDashboard.tsx">
+              <Upload className="h-5 w-5 text-green-600" data-id="ok1rel2un" data-path="src/components/dashboard/MainDashboard.tsx" />
+            </div>
+            <div data-id="7e9km84ml" data-path="src/components/dashboard/MainDashboard.tsx">
+              <p className="text-sm text-gray-600" data-id="338tx7vc6" data-path="src/components/dashboard/MainDashboard.tsx">Completed</p>
+              <p className="text-2xl font-bold text-gray-900" data-id="2tmzt5qxa" data-path="src/components/dashboard/MainDashboard.tsx">
                 {jobs.filter((job) => job.status === 'completed').length}
               </p>
             </div>
@@ -257,100 +257,100 @@ const MainDashboard: React.FC = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="mt6xwpnba" data-path="src/components/dashboard/MainDashboard.tsx">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="u8ns3dqsf" data-path="src/components/dashboard/MainDashboard.tsx">
         {/* Main Content Tabs */}
-        <div className="lg:col-span-2" data-id="y82baj9hp" data-path="src/components/dashboard/MainDashboard.tsx">
-          <Tabs defaultValue="processing" className="space-y-6" data-id="pdo14238d" data-path="src/components/dashboard/MainDashboard.tsx">
-            <TabsList className="grid w-full grid-cols-3" data-id="omkgpbzsv" data-path="src/components/dashboard/MainDashboard.tsx">
-              <TabsTrigger value="processing" className="flex items-center space-x-2" data-id="0zfgt7voq" data-path="src/components/dashboard/MainDashboard.tsx">
-                <Play className="h-4 w-4" data-id="z0i6ugg03" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="oqnm85lnc" data-path="src/components/dashboard/MainDashboard.tsx">Data Processing</span>
+        <div className="lg:col-span-2" data-id="ofka63c52" data-path="src/components/dashboard/MainDashboard.tsx">
+          <Tabs defaultValue="processing" className="space-y-6" data-id="vxlfikwg6" data-path="src/components/dashboard/MainDashboard.tsx">
+            <TabsList className="grid w-full grid-cols-3" data-id="hitk4magq" data-path="src/components/dashboard/MainDashboard.tsx">
+              <TabsTrigger value="processing" className="flex items-center space-x-2" data-id="1xv7n2jnu" data-path="src/components/dashboard/MainDashboard.tsx">
+                <Play className="h-4 w-4" data-id="9naea7zhv" data-path="src/components/dashboard/MainDashboard.tsx" />
+                <span data-id="k3lu2lnk2" data-path="src/components/dashboard/MainDashboard.tsx">Data Processing</span>
               </TabsTrigger>
-              <TabsTrigger value="diagnostics" className="flex items-center space-x-2" data-id="ku3lzu2yl" data-path="src/components/dashboard/MainDashboard.tsx">
-                <TestTube className="h-4 w-4" data-id="jbig6u5et" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="34gcziz87" data-path="src/components/dashboard/MainDashboard.tsx">Diagnostics</span>
+              <TabsTrigger value="diagnostics" className="flex items-center space-x-2" data-id="y1wn6q0vg" data-path="src/components/dashboard/MainDashboard.tsx">
+                <TestTube className="h-4 w-4" data-id="c28bncddy" data-path="src/components/dashboard/MainDashboard.tsx" />
+                <span data-id="8bp8jany0" data-path="src/components/dashboard/MainDashboard.tsx">Diagnostics</span>
               </TabsTrigger>
-              <TabsTrigger value="configuration" className="flex items-center space-x-2" data-id="47k9n97ww" data-path="src/components/dashboard/MainDashboard.tsx">
-                <Settings className="h-4 w-4" data-id="rxtz0isv9" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="c3etyq1tt" data-path="src/components/dashboard/MainDashboard.tsx">Configuration</span>
+              <TabsTrigger value="configuration" className="flex items-center space-x-2" data-id="fjqksa5uk" data-path="src/components/dashboard/MainDashboard.tsx">
+                <Settings className="h-4 w-4" data-id="trxql36t4" data-path="src/components/dashboard/MainDashboard.tsx" />
+                <span data-id="nxbxg7vvs" data-path="src/components/dashboard/MainDashboard.tsx">Configuration</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="processing" className="space-y-6" data-id="y4gxke9rd" data-path="src/components/dashboard/MainDashboard.tsx">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="2vkd4fi4y" data-path="src/components/dashboard/MainDashboard.tsx">
+            <TabsContent value="processing" className="space-y-6" data-id="jinsaeto7" data-path="src/components/dashboard/MainDashboard.tsx">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="q7ehx3jtp" data-path="src/components/dashboard/MainDashboard.tsx">
                 {/* Processing Configuration */}
-                <Card data-id="oh2zk6z2o" data-path="src/components/dashboard/MainDashboard.tsx">
-                  <CardHeader data-id="an63ofjmb" data-path="src/components/dashboard/MainDashboard.tsx">
-                    <CardTitle data-id="416lta82b" data-path="src/components/dashboard/MainDashboard.tsx">New Processing Job</CardTitle>
+                <Card data-id="jejf0pix5" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <CardHeader data-id="gey097wx0" data-path="src/components/dashboard/MainDashboard.tsx">
+                    <CardTitle data-id="9damdt7wm" data-path="src/components/dashboard/MainDashboard.tsx">New Processing Job</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-6" data-id="s9vw72dqb" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <CardContent className="space-y-6" data-id="l6i5p6utz" data-path="src/components/dashboard/MainDashboard.tsx">
                     {/* Data Source Selection */}
-                    <div data-id="c3i2hl0mr" data-path="src/components/dashboard/MainDashboard.tsx">
-                      <Label className="text-base font-medium" data-id="izq61i7h3" data-path="src/components/dashboard/MainDashboard.tsx">Data Source</Label>
+                    <div data-id="elr2uiavt" data-path="src/components/dashboard/MainDashboard.tsx">
+                      <Label className="text-base font-medium" data-id="k20iosrqd" data-path="src/components/dashboard/MainDashboard.tsx">Data Source</Label>
                       <Tabs
                         value={config.sourceType}
                         onValueChange={(value) => setConfig({
                           ...config,
                           sourceType: value as 'local' | 'gcs'
-                        })} data-id="84ps1x4k8" data-path="src/components/dashboard/MainDashboard.tsx">
+                        })} data-id="ue1h11wlm" data-path="src/components/dashboard/MainDashboard.tsx">
 
-                        <TabsList className="grid w-full grid-cols-2" data-id="q0ose1zft" data-path="src/components/dashboard/MainDashboard.tsx">
-                          <TabsTrigger value="local" className="flex items-center space-x-2" data-id="dndn1eg3z" data-path="src/components/dashboard/MainDashboard.tsx">
-                            <Upload className="h-4 w-4" data-id="otwa467o0" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            <span data-id="4w4hmx1ws" data-path="src/components/dashboard/MainDashboard.tsx">Local Upload</span>
+                        <TabsList className="grid w-full grid-cols-2" data-id="p1jh6pyt3" data-path="src/components/dashboard/MainDashboard.tsx">
+                          <TabsTrigger value="local" className="flex items-center space-x-2" data-id="4a9ddlh3p" data-path="src/components/dashboard/MainDashboard.tsx">
+                            <Upload className="h-4 w-4" data-id="z02vcz2y9" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            <span data-id="y6x7hool2" data-path="src/components/dashboard/MainDashboard.tsx">Local Upload</span>
                           </TabsTrigger>
-                          <TabsTrigger value="gcs" className="flex items-center space-x-2" data-id="f94i9qhy2" data-path="src/components/dashboard/MainDashboard.tsx">
-                            <Cloud className="h-4 w-4" data-id="pw6osmfah" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            <span data-id="xhtn15aro" data-path="src/components/dashboard/MainDashboard.tsx">GCS Path</span>
+                          <TabsTrigger value="gcs" className="flex items-center space-x-2" data-id="ntkjnuo6z" data-path="src/components/dashboard/MainDashboard.tsx">
+                            <Cloud className="h-4 w-4" data-id="pvrgczg43" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            <span data-id="sjxcpx1t5" data-path="src/components/dashboard/MainDashboard.tsx">GCS Path</span>
                           </TabsTrigger>
                         </TabsList>
                         
-                        <TabsContent value="local" className="mt-4" data-id="pj9eorws2" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <TabsContent value="local" className="mt-4" data-id="jfc51aad7" data-path="src/components/dashboard/MainDashboard.tsx">
                           <FileUploadZone
                             selectedFile={config.file || null}
                             onFileSelect={(file) => setConfig({ ...config, file: file || undefined })}
-                            disabled={isProcessing} data-id="dd3ku9358" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            disabled={isProcessing} data-id="sn3vph9jb" data-path="src/components/dashboard/MainDashboard.tsx" />
 
                         </TabsContent>
                         
-                        <TabsContent value="gcs" className="mt-4" data-id="tkebwladr" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <TabsContent value="gcs" className="mt-4" data-id="sjcktbu0j" data-path="src/components/dashboard/MainDashboard.tsx">
                           <GCSPathInput
                             bucket={config.gcsBucket || ''}
                             path={config.gcsPath || ''}
                             onBucketChange={(bucket) => setConfig({ ...config, gcsBucket: bucket })}
                             onPathChange={(path) => setConfig({ ...config, gcsPath: path })}
-                            disabled={isProcessing} data-id="mmtnhioj8" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            disabled={isProcessing} data-id="a4f7xxdb0" data-path="src/components/dashboard/MainDashboard.tsx" />
 
                         </TabsContent>
                       </Tabs>
                     </div>
 
                     {/* GCP Configuration */}
-                    <div className="grid gap-4" data-id="bzb3opu1l" data-path="src/components/dashboard/MainDashboard.tsx">
-                      <div className="space-y-2" data-id="nw7b96xgg" data-path="src/components/dashboard/MainDashboard.tsx">
-                        <Label htmlFor="gcp-project" data-id="ilmmwqwc5" data-path="src/components/dashboard/MainDashboard.tsx">GCP Project ID</Label>
+                    <div className="grid gap-4" data-id="f2na6jsyw" data-path="src/components/dashboard/MainDashboard.tsx">
+                      <div className="space-y-2" data-id="fyobhq6jz" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <Label htmlFor="gcp-project" data-id="kf1t5i3mk" data-path="src/components/dashboard/MainDashboard.tsx">GCP Project ID</Label>
                         <Input
                           id="gcp-project"
                           placeholder="my-gcp-project"
                           value={config.gcpProjectId}
                           onChange={(e) => setConfig({ ...config, gcpProjectId: e.target.value })}
-                          disabled={isProcessing} data-id="20p137592" data-path="src/components/dashboard/MainDashboard.tsx" />
+                          disabled={isProcessing} data-id="18kdiwe17" data-path="src/components/dashboard/MainDashboard.tsx" />
 
-                        <p className="text-xs text-gray-500" data-id="z08m0mcyz" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <p className="text-xs text-gray-500" data-id="tb1i1ibjf" data-path="src/components/dashboard/MainDashboard.tsx">
                           Enter your Google Cloud Platform project ID
                         </p>
                       </div>
 
-                      <div className="space-y-2" data-id="2ol0rbi2z" data-path="src/components/dashboard/MainDashboard.tsx">
-                        <Label htmlFor="target-table" data-id="e5fj5uhph" data-path="src/components/dashboard/MainDashboard.tsx">BigQuery Target Table</Label>
+                      <div className="space-y-2" data-id="msyrxat1m" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <Label htmlFor="target-table" data-id="3j6el044j" data-path="src/components/dashboard/MainDashboard.tsx">BigQuery Target Table</Label>
                         <Input
                           id="target-table"
                           placeholder="dataset.table_name"
                           value={config.targetTable}
                           onChange={(e) => setConfig({ ...config, targetTable: e.target.value })}
-                          disabled={isProcessing} data-id="unha4h1y8" data-path="src/components/dashboard/MainDashboard.tsx" />
+                          disabled={isProcessing} data-id="d57zwh7l7" data-path="src/components/dashboard/MainDashboard.tsx" />
 
-                        <p className="text-xs text-gray-500" data-id="oiz3vuw4e" data-path="src/components/dashboard/MainDashboard.tsx">
+                        <p className="text-xs text-gray-500" data-id="dycmj4944" data-path="src/components/dashboard/MainDashboard.tsx">
                           Format: dataset.table_name (e.g., geospatial_data.shapefiles)
                         </p>
                       </div>
@@ -364,24 +364,24 @@ const MainDashboard: React.FC = () => {
                       onCustomSchemaChange={(schema) => setConfig({ ...config, customSchema: schema })}
                       integerColumns={config.integerColumns || ''}
                       onIntegerColumnsChange={(columns) => setConfig({ ...config, integerColumns: columns })}
-                      disabled={isProcessing} data-id="59iw3jqw0" data-path="src/components/dashboard/MainDashboard.tsx" />
+                      disabled={isProcessing} data-id="nx1u4zo3f" data-path="src/components/dashboard/MainDashboard.tsx" />
 
 
                     {/* Process Button */}
-                    <div className="pt-4" data-id="iz6vumtrh" data-path="src/components/dashboard/MainDashboard.tsx">
+                    <div className="pt-4" data-id="ivtp6j8ub" data-path="src/components/dashboard/MainDashboard.tsx">
                       <Button
                         onClick={handleStartProcessing}
                         disabled={isProcessing}
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" data-id="epcoxf39x" data-path="src/components/dashboard/MainDashboard.tsx">
+                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" data-id="i4szcwquo" data-path="src/components/dashboard/MainDashboard.tsx">
 
                         {isProcessing ?
                         <>
-                            <Zap className="mr-2 h-4 w-4 animate-pulse" data-id="eoqy6wayo" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            <Zap className="mr-2 h-4 w-4 animate-pulse" data-id="g9xhd179h" data-path="src/components/dashboard/MainDashboard.tsx" />
                             Starting Processing...
                           </> :
 
                         <>
-                            <Play className="mr-2 h-4 w-4" data-id="ib4b5mgio" data-path="src/components/dashboard/MainDashboard.tsx" />
+                            <Play className="mr-2 h-4 w-4" data-id="nylhjvet0" data-path="src/components/dashboard/MainDashboard.tsx" />
                             Start Processing
                           </>
                         }
@@ -391,18 +391,18 @@ const MainDashboard: React.FC = () => {
                 </Card>
 
                 {/* Job Status */}
-                <div data-id="j9ev9b65x" data-path="src/components/dashboard/MainDashboard.tsx">
-                  <JobStatus jobs={jobs} onJobsUpdate={setJobs} data-id="njboozhro" data-path="src/components/dashboard/MainDashboard.tsx" />
+                <div data-id="80wl9ymte" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <JobStatus jobs={jobs} onJobsUpdate={setJobs} data-id="ro4qqqe1j" data-path="src/components/dashboard/MainDashboard.tsx" />
                 </div>
               </div>
             </TabsContent>
 
-            <TabsContent value="diagnostics" className="space-y-6" data-id="96rps60ld" data-path="src/components/dashboard/MainDashboard.tsx">
-              <ConnectionTest projectId={config.gcpProjectId} data-id="7si9zmlo1" data-path="src/components/dashboard/MainDashboard.tsx" />
+            <TabsContent value="diagnostics" className="space-y-6" data-id="pwnxyh5oo" data-path="src/components/dashboard/MainDashboard.tsx">
+              <ConnectionTest projectId={config.gcpProjectId} data-id="z7fsctidm" data-path="src/components/dashboard/MainDashboard.tsx" />
             </TabsContent>
 
-            <TabsContent value="configuration" data-id="sub79wko8" data-path="src/components/dashboard/MainDashboard.tsx">
-              <ProductionSetup data-id="k9a93kyah" data-path="src/components/dashboard/MainDashboard.tsx" />
+            <TabsContent value="configuration" data-id="dukzf1j4h" data-path="src/components/dashboard/MainDashboard.tsx">
+              <ProductionSetup data-id="i9u576tun" data-path="src/components/dashboard/MainDashboard.tsx" />
             </TabsContent>
           </Tabs>
         </div>

@@ -19,16 +19,16 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient} data-id="rjwaq2cov" data-path="src/App.tsx">
-      <TooltipProvider data-id="xshbs7h8m" data-path="src/App.tsx">
-        <AuthProvider data-id="8344ifyue" data-path="src/App.tsx">
-          <Router data-id="da8rzbidw" data-path="src/App.tsx">
-            <div className="App" data-id="u2ydxbg3s" data-path="src/App.tsx">
-              <Routes data-id="6u57qqz4u" data-path="src/App.tsx">
-                <Route path="/" element={<HomePage data-id="qeihwgmm4" data-path="src/App.tsx" />} data-id="01agv65b4" data-path="src/App.tsx" />
-                <Route path="*" element={<NotFound data-id="zkcb1w2rb" data-path="src/App.tsx" />} data-id="yfticaunr" data-path="src/App.tsx" />
+    <QueryClientProvider client={queryClient} data-id="3acdz3ars" data-path="src/App.tsx">
+      <TooltipProvider data-id="9q74mms7r" data-path="src/App.tsx">
+        <AuthProvider data-id="gawmiuvzf" data-path="src/App.tsx">
+          <Router data-id="h9465ui0r" data-path="src/App.tsx">
+            <div className="App" data-id="r8r5y9s23" data-path="src/App.tsx">
+              <Routes data-id="umsr9d95q" data-path="src/App.tsx">
+                <Route path="/" element={<HomePage data-id="7rdmcfrr3" data-path="src/App.tsx" />} data-id="7r0c9tyzu" data-path="src/App.tsx" />
+                <Route path="*" element={<NotFound data-id="6yu9ig6e3" data-path="src/App.tsx" />} data-id="a171mj1mf" data-path="src/App.tsx" />
               </Routes>
-              <Toaster data-id="l92lnh9nu" data-path="src/App.tsx" />
+              <Toaster data-id="3f6dxrznn" data-path="src/App.tsx" />
             </div>
           </Router>
         </AuthProvider>

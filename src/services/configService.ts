@@ -9,7 +9,7 @@ interface AppConfig {
   enableRealProcessing: boolean;
   maxFileSize: number; // in MB
   supportedFormats: string[];
-  authMethod?: 'api-gateway' | 'service-account';
+  authMethod?: 'api-gateway' | 'service-account' | 'oauth';
   serviceAccountKey?: string;
 }
 
@@ -31,7 +31,7 @@ class ConfigService {
       enableRealProcessing: import.meta.env.VITE_ENABLE_REAL_PROCESSING === 'true',
       maxFileSize: parseInt(import.meta.env.VITE_MAX_FILE_SIZE || '100', 10),
       supportedFormats: ['zip', 'shp', 'geojson', 'kml'],
-      authMethod: import.meta.env.VITE_AUTH_METHOD as any || 'service-account',
+      authMethod: import.meta.env.VITE_AUTH_METHOD as any || 'oauth', // Default to OAuth
       serviceAccountKey: import.meta.env.VITE_SERVICE_ACCOUNT_KEY,
       // Override with saved configuration
       ...savedConfig
@@ -50,14 +50,28 @@ class ConfigService {
       }
     }
 
-    console.log('ConfigService initialized:', {
+    console.log('🔧 ConfigService initialized:', {
       environment: this.config.environment,
       authMethod: this.config.authMethod,
       enableRealProcessing: this.config.enableRealProcessing,
       hasServiceAccountKey: !!this.config.serviceAccountKey,
+      hasApiKey: !!this.config.apiKey,
       defaultBucket: this.config.gcsDefaultBucket,
-      isProductionReady: this.isProductionReady()
+      isProductionReady: this.isProductionReady(),
+      isRealProcessingEnabled: this.isRealProcessingEnabled()
     });
+
+    // Show important warnings for service account mode
+    if (this.config.authMethod === 'service-account') {
+      console.warn('⚠️  WARNING: Service account mode is not supported in browser applications');
+      console.warn('   Browser-based apps cannot securely use service account keys');
+      console.warn('   Please use OAuth or API Gateway authentication instead');
+      console.warn('   Switching to OAuth mode automatically...');
+
+      // Auto-switch to OAuth mode for better user experience
+      this.config.authMethod = 'oauth';
+      this.saveToStorage();
+    }
   }
 
   private loadFromStorage(): Partial<AppConfig> {
@@ -114,8 +128,8 @@ class ConfigService {
     return this.config.apiKey;
   }
 
-  getAuthMethod(): 'api-gateway' | 'service-account' {
-    return this.config.authMethod || 'service-account';
+  getAuthMethod(): 'api-gateway' | 'service-account' | 'oauth' {
+    return this.config.authMethod || 'oauth';
   }
 
   getServiceAccountKey(): string | undefined {
@@ -125,7 +139,14 @@ class ConfigService {
   isRealProcessingEnabled(): boolean {
     // Real processing is enabled if:
     // 1. The flag is explicitly enabled AND
-    // 2. We have valid authentication configured
+    // 2. We have valid authentication configured AND
+    // 3. Service account mode is explicitly disabled due to browser limitations
+    if (this.config.authMethod === 'service-account') {
+      // Service account mode is not supported in browsers - force to mock mode
+      console.log('🔧 Using mock mode - service account authentication not supported in browsers');
+      return false;
+    }
+
     return this.config.enableRealProcessing && this.hasValidAuthentication();
   }
 
@@ -136,9 +157,13 @@ class ConfigService {
 
   private hasValidAuthentication(): boolean {
     if (this.config.authMethod === 'service-account') {
-      return !!(this.config.serviceAccountKey && this.validateServiceAccountKey(this.config.serviceAccountKey));
+      // Service account validation - but note it's not supported in browsers
+      return false; // Always return false for service account in browser
     } else if (this.config.authMethod === 'api-gateway') {
       return !!(this.config.apiEndpoint && this.config.apiKey);
+    } else if (this.config.authMethod === 'oauth') {
+      // OAuth is valid if we have basic configuration - actual tokens are handled at runtime
+      return true; // OAuth is always considered valid as it's user-initiated
     }
     return false;
   }
@@ -152,9 +177,16 @@ class ConfigService {
   }
 
   updateConfig(updates: Partial<AppConfig>): void {
-    console.log('Updating configuration:', updates);
+    console.log('🔧 Updating configuration:', updates);
 
-    // Auto-configure bucket name if service account key is being updated
+    // Prevent setting service account mode in browser
+    if (updates.authMethod === 'service-account') {
+      console.warn('⚠️  Cannot use service account mode in browser applications');
+      console.warn('   Switching to OAuth mode instead');
+      updates.authMethod = 'oauth';
+    }
+
+    // Auto-configure bucket name if service account key is being updated (though we don't support it)
     if (updates.serviceAccountKey && !updates.gcsDefaultBucket) {
       try {
         const keyData = JSON.parse(updates.serviceAccountKey);
@@ -171,11 +203,12 @@ class ConfigService {
     this.saveToStorage();
 
     // Log the updated state
-    console.log('Configuration updated:', {
+    console.log('🔧 Configuration updated:', {
       environment: this.config.environment,
       authMethod: this.config.authMethod,
       enableRealProcessing: this.config.enableRealProcessing,
       hasServiceAccountKey: !!this.config.serviceAccountKey,
+      hasApiKey: !!this.config.apiKey,
       defaultBucket: this.config.gcsDefaultBucket,
       isProductionReady: this.isProductionReady(),
       isRealProcessingEnabled: this.isRealProcessingEnabled()
@@ -217,15 +250,15 @@ class ConfigService {
         errors.push('API key is required for real processing with API Gateway');
       }
     } else if (this.config.authMethod === 'service-account') {
-      if (this.config.enableRealProcessing && !this.config.serviceAccountKey) {
-        errors.push('Service account key is required for real processing');
-      }
-      if (this.config.serviceAccountKey && !this.validateServiceAccountKey(this.config.serviceAccountKey)) {
-        errors.push('Invalid service account key format');
-      }
-    }
+      // Always add error for service account mode in browser
+      errors.push('❌ Service account authentication is not supported in browser applications');
+      errors.push('Please use OAuth or API Gateway authentication instead');
+    } else if (this.config.authMethod === 'oauth') {
 
-    return errors;
+
+      // OAuth has no specific configuration requirements
+      // The OAuth flow will handle authentication at runtime
+    }return errors;
   }
 
   getEnvironmentInfo(): {
@@ -236,12 +269,24 @@ class ConfigService {
     productionReady: boolean;
     defaultBucket?: string;
     projectId?: string;
+    implementationWarnings: string[];
   } {
     const authConfigured = this.config.authMethod === 'service-account' ?
-    !!this.config.serviceAccountKey :
-    !!(this.config.apiEndpoint && this.config.apiKey);
+    false : // Service account never configured in browser
+    this.config.authMethod === 'api-gateway' ?
+    !!(this.config.apiEndpoint && this.config.apiKey) :
+    true; // OAuth is always considered configured
 
     const productionReady = this.isProductionReady();
+    const implementationWarnings: string[] = [];
+
+    // Add warnings for service account mode
+    if (this.config.authMethod === 'service-account') {
+      implementationWarnings.push('Service account authentication is not supported in browser applications');
+      implementationWarnings.push('Browser-based apps cannot securely sign JWTs with private keys');
+      implementationWarnings.push('This is a fundamental security limitation of web browsers');
+      implementationWarnings.push('Please use OAuth (recommended) or API Gateway authentication');
+    }
 
     return {
       environment: this.config.environment,
@@ -250,15 +295,23 @@ class ConfigService {
       configErrors: this.validateRequiredConfig(),
       productionReady,
       defaultBucket: this.config.gcsDefaultBucket,
-      projectId: this.getGcpProjectFromServiceAccount()
+      projectId: this.getGcpProjectFromServiceAccount(),
+      implementationWarnings
     };
   }
 
   // Auto-enable real processing when connections are successfully tested
   enableRealProcessingIfReady(): void {
     if (this.hasValidAuthentication() && !this.config.enableRealProcessing) {
-      console.log('🎯 Auto-enabling real processing - authentication is valid');
-      this.updateConfig({ enableRealProcessing: true });
+      if (this.config.authMethod === 'api-gateway') {
+        console.log('🎯 Auto-enabling real processing - API Gateway authentication is valid');
+        this.updateConfig({ enableRealProcessing: true });
+      } else if (this.config.authMethod === 'oauth') {
+        console.log('🎯 Auto-enabling real processing - OAuth authentication is available');
+        this.updateConfig({ enableRealProcessing: true });
+      }
+    } else if (this.config.authMethod === 'service-account') {
+      console.log('🚫 Not enabling real processing - Service account mode is not supported in browsers');
     }
   }
 
@@ -278,14 +331,54 @@ class ConfigService {
       return this.config.gcsDefaultBucket;
     }
 
-    // Try to get from service account
+    // Try to get from service account (though not supported in browser)
     const projectId = this.getGcpProjectFromServiceAccount();
     if (projectId) {
       return `${projectId}-shapefile-uploads`;
     }
 
-    // Fallback
-    return 'default-shapefile-uploads';
+    // Default bucket for demo mode
+    return 'demo-shapefile-uploads';
+  }
+
+  // Force mock mode (useful for demos)
+  forceMockMode(): void {
+    console.log('🎭 Forcing mock mode for demonstration');
+    this.updateConfig({ enableRealProcessing: false });
+  }
+
+  // Force OAuth mode (recommended for browser apps)
+  forceOAuthMode(): void {
+    console.log('🔐 Switching to OAuth mode (recommended for browsers)');
+    this.updateConfig({ authMethod: 'oauth' });
+  }
+
+  // Force API Gateway mode
+  forceApiGatewayMode(): void {
+    console.log('🌐 Switching to API Gateway mode');
+    this.updateConfig({ authMethod: 'api-gateway' });
+  }
+
+  // Get OAuth configuration for UI display
+  getOAuthInfo(): {
+    clientId?: string;
+    scopes: string[];
+    redirectUri: string;
+    authUrl: string;
+  } {
+    const redirectUri = window.location.origin + '/oauth/callback';
+    const scopes = [
+    'https://www.googleapis.com/auth/bigquery',
+    'https://www.googleapis.com/auth/cloud-platform',
+    'https://www.googleapis.com/auth/devstorage.read_write'];
+
+
+    return {
+      clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com',
+      scopes,
+      redirectUri,
+      authUrl: 'https://accounts.google.com/oauth2/v2/auth'
+    };
   }
 }
 

@@ -35,26 +35,26 @@ const ConnectionTest: React.FC = () => {
   const getStatusIcon = (status: ConnectionStatus['status']) => {
     switch (status) {
       case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" data-id="1hh89pvvk" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+        return <CheckCircle className="h-4 w-4 text-green-500" data-id="5agi250xj" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
       case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" data-id="ap7bdall3" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+        return <XCircle className="h-4 w-4 text-red-500" data-id="bpzh3ysv8" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
       case 'testing':
-        return <Clock className="h-4 w-4 text-blue-500 animate-spin" data-id="6ffc5yueq" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+        return <Clock className="h-4 w-4 text-blue-500 animate-spin" data-id="wae0t9id0" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-400" data-id="uib7z7qxb" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+        return <AlertCircle className="h-4 w-4 text-gray-400" data-id="04wdi4xvg" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
     }
   };
 
   const getStatusBadge = (status: ConnectionStatus['status']) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default" className="bg-green-100 text-green-800" data-id="hss4r9ys3" data-path="src/components/diagnostics/ConnectionTest.tsx">Connected</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800" data-id="3ri3o1tbu" data-path="src/components/diagnostics/ConnectionTest.tsx">Connected</Badge>;
       case 'error':
-        return <Badge variant="destructive" data-id="zj9umdiu2" data-path="src/components/diagnostics/ConnectionTest.tsx">Failed</Badge>;
+        return <Badge variant="destructive" data-id="ablz9bdj9" data-path="src/components/diagnostics/ConnectionTest.tsx">Failed</Badge>;
       case 'testing':
-        return <Badge variant="secondary" data-id="fhsabd3wv" data-path="src/components/diagnostics/ConnectionTest.tsx">Testing...</Badge>;
+        return <Badge variant="secondary" data-id="b1mb8gfqx" data-path="src/components/diagnostics/ConnectionTest.tsx">Testing...</Badge>;
       default:
-        return <Badge variant="outline" data-id="0yqyb4fpe" data-path="src/components/diagnostics/ConnectionTest.tsx">Not Tested</Badge>;
+        return <Badge variant="outline" data-id="ig42nn71u" data-path="src/components/diagnostics/ConnectionTest.tsx">Not Tested</Badge>;
     }
   };
 
@@ -227,53 +227,53 @@ const ConnectionTest: React.FC = () => {
   const isRealProcessingEnabled = configService.isRealProcessingEnabled();
 
   return (
-    <div className="space-y-6" data-id="nr1s77iys" data-path="src/components/diagnostics/ConnectionTest.tsx">
-      <Card data-id="ful8mdeqk" data-path="src/components/diagnostics/ConnectionTest.tsx">
-        <CardHeader data-id="t5twsa3r6" data-path="src/components/diagnostics/ConnectionTest.tsx">
-          <CardTitle className="flex items-center gap-2" data-id="sb1e1t9r8" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            <Zap className="h-5 w-5" data-id="jijku6gtv" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+    <div className="space-y-6" data-id="k9g6xi5mg" data-path="src/components/diagnostics/ConnectionTest.tsx">
+      <Card data-id="507lnog5c" data-path="src/components/diagnostics/ConnectionTest.tsx">
+        <CardHeader data-id="fq5tqw3so" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <CardTitle className="flex items-center gap-2" data-id="kpvi1h54n" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            <Zap className="h-5 w-5" data-id="oafzv26p1" data-path="src/components/diagnostics/ConnectionTest.tsx" />
             Connection Diagnostics
           </CardTitle>
-          <CardDescription data-id="uav09c3b2" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <CardDescription data-id="apl5wy4s3" data-path="src/components/diagnostics/ConnectionTest.tsx">
             Test your BigQuery and Google Cloud Storage connections
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6" data-id="pg0x5v3g4" data-path="src/components/diagnostics/ConnectionTest.tsx">
+        <CardContent className="space-y-6" data-id="vtzgpynva" data-path="src/components/diagnostics/ConnectionTest.tsx">
           {/* Configuration Status */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-id="cvg5h9v8b" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            <div data-id="zftvbxzbt" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <p className="font-medium" data-id="ky5f04crx" data-path="src/components/diagnostics/ConnectionTest.tsx">Current Configuration</p>
-              <p className="text-sm text-gray-600" data-id="wy8y9wy02" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-id="bi84vvrk3" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            <div data-id="523xwo382" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <p className="font-medium" data-id="0olu2720l" data-path="src/components/diagnostics/ConnectionTest.tsx">Current Configuration</p>
+              <p className="text-sm text-gray-600" data-id="3hvefvkm1" data-path="src/components/diagnostics/ConnectionTest.tsx">
                 Auth: {authMethod} • Real Processing: {isRealProcessingEnabled ? 'Enabled' : 'Disabled'}
               </p>
             </div>
-            <div className="flex items-center gap-2" data-id="un1ao3znb" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            <div className="flex items-center gap-2" data-id="ruro58w65" data-path="src/components/diagnostics/ConnectionTest.tsx">
               {hasServiceAccount ?
-              <Badge variant="default" className="bg-green-100 text-green-800" data-id="1zkd9a60m" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Badge variant="default" className="bg-green-100 text-green-800" data-id="s8kpko3qq" data-path="src/components/diagnostics/ConnectionTest.tsx">
                   Service Account Configured
                 </Badge> :
 
-              <Badge variant="outline" data-id="umzfvhoi6" data-path="src/components/diagnostics/ConnectionTest.tsx">No Service Account</Badge>
+              <Badge variant="outline" data-id="hary7zqv2" data-path="src/components/diagnostics/ConnectionTest.tsx">No Service Account</Badge>
               }
             </div>
           </div>
 
           {/* Test All Button */}
-          <div className="flex justify-center" data-id="ptz5g4uvj" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <div className="flex justify-center" data-id="064bvwapx" data-path="src/components/diagnostics/ConnectionTest.tsx">
             <Button
               onClick={testAllConnections}
               disabled={isTestingAll || !hasServiceAccount}
               size="lg"
-              className="min-w-48" data-id="xnlc4c1m1" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              className="min-w-48" data-id="27kp7iosg" data-path="src/components/diagnostics/ConnectionTest.tsx">
 
               {isTestingAll ?
               <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" data-id="a9xey5cvz" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                  <Clock className="h-4 w-4 mr-2 animate-spin" data-id="zx5btixua" data-path="src/components/diagnostics/ConnectionTest.tsx" />
                   Testing Connections...
                 </> :
 
               <>
-                  <Zap className="h-4 w-4 mr-2" data-id="ldmkmu3yv" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                  <Zap className="h-4 w-4 mr-2" data-id="xmb0ka9al" data-path="src/components/diagnostics/ConnectionTest.tsx" />
                   Test All Connections
                 </>
               }
@@ -284,13 +284,13 @@ const ConnectionTest: React.FC = () => {
           {testResult.overall.status !== 'idle' &&
           <Alert className={testResult.overall.status === 'success' ? 'border-green-200 bg-green-50' :
           testResult.overall.status === 'error' ? 'border-red-200 bg-red-50' :
-          'border-blue-200 bg-blue-50'} data-id="wid5ljz9d" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <div className="flex items-center gap-2" data-id="p5angh2a9" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          'border-blue-200 bg-blue-50'} data-id="v3k99936d" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <div className="flex items-center gap-2" data-id="52s5709rc" data-path="src/components/diagnostics/ConnectionTest.tsx">
                 {getStatusIcon(testResult.overall.status)}
-                <AlertDescription data-id="ne5qljvvm" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <strong data-id="yxjed5ioa" data-path="src/components/diagnostics/ConnectionTest.tsx">{testResult.overall.message}</strong>
+                <AlertDescription data-id="bk32qjv9p" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <strong data-id="ahszw9l9y" data-path="src/components/diagnostics/ConnectionTest.tsx">{testResult.overall.message}</strong>
                   {testResult.overall.details &&
-                <div className="text-sm text-gray-600 mt-1" data-id="15u1m9eny" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <div className="text-sm text-gray-600 mt-1" data-id="fnmxs0bz8" data-path="src/components/diagnostics/ConnectionTest.tsx">
                       {testResult.overall.details}
                     </div>
                 }
@@ -299,29 +299,29 @@ const ConnectionTest: React.FC = () => {
             </Alert>
           }
 
-          <Separator data-id="2nlgwveau" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+          <Separator data-id="0y53bzpv0" data-path="src/components/diagnostics/ConnectionTest.tsx" />
 
           {/* Individual Connection Tests */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-id="mbutithe5" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-id="cx0ck1z2q" data-path="src/components/diagnostics/ConnectionTest.tsx">
             {/* BigQuery Connection */}
-            <Card data-id="rn7vzvz2w" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <CardHeader className="pb-3" data-id="3kzy0h2sg" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <CardTitle className="text-lg flex items-center justify-between" data-id="jf5ng2g6t" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <span data-id="hkk0m1i8c" data-path="src/components/diagnostics/ConnectionTest.tsx">BigQuery</span>
+            <Card data-id="tdsj46bm4" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <CardHeader className="pb-3" data-id="97yddwdwj" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <CardTitle className="text-lg flex items-center justify-between" data-id="7mmkk6t1r" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <span data-id="1we0nu6wm" data-path="src/components/diagnostics/ConnectionTest.tsx">BigQuery</span>
                   {getStatusBadge(testResult.bigquery.status)}
                 </CardTitle>
               </CardHeader>
-              <CardContent data-id="yt22139c0" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <div className="space-y-3" data-id="eo7s33dqf" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <CardContent data-id="as2jchbgc" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <div className="space-y-3" data-id="ath0ppl6l" data-path="src/components/diagnostics/ConnectionTest.tsx">
                   <Button
                     variant="outline"
                     onClick={testBigQueryConnection}
                     disabled={testResult.bigquery.status === 'testing' || !hasServiceAccount}
-                    className="w-full" data-id="roylk2n7p" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    className="w-full" data-id="0ohnsvnek" data-path="src/components/diagnostics/ConnectionTest.tsx">
 
                     {testResult.bigquery.status === 'testing' ?
                     <>
-                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="og7jttyje" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="ke7460t0l" data-path="src/components/diagnostics/ConnectionTest.tsx" />
                         Testing...
                       </> :
 
@@ -330,12 +330,12 @@ const ConnectionTest: React.FC = () => {
                   </Button>
 
                   {testResult.bigquery.message &&
-                  <div className="text-sm" data-id="lh9wi8w5j" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                      <p className={testResult.bigquery.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="chygef7d1" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <div className="text-sm" data-id="4knj7y0gc" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <p className={testResult.bigquery.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="ezjamjkic" data-path="src/components/diagnostics/ConnectionTest.tsx">
                         {testResult.bigquery.message}
                       </p>
                       {testResult.bigquery.details &&
-                    <p className="text-gray-600 mt-1" data-id="g90d9lgh2" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    <p className="text-gray-600 mt-1" data-id="v3rviv45l" data-path="src/components/diagnostics/ConnectionTest.tsx">
                           {testResult.bigquery.details}
                         </p>
                     }
@@ -346,24 +346,24 @@ const ConnectionTest: React.FC = () => {
             </Card>
 
             {/* GCS Connection */}
-            <Card data-id="wj74bz1zp" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <CardHeader className="pb-3" data-id="p6o4xqgib" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <CardTitle className="text-lg flex items-center justify-between" data-id="q2i5f8tvy" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <span data-id="grv6c3z9o" data-path="src/components/diagnostics/ConnectionTest.tsx">Cloud Storage</span>
+            <Card data-id="93d23whvy" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <CardHeader className="pb-3" data-id="pf9z49yuk" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <CardTitle className="text-lg flex items-center justify-between" data-id="4z4jsvjbx" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <span data-id="1rv9h9hmw" data-path="src/components/diagnostics/ConnectionTest.tsx">Cloud Storage</span>
                   {getStatusBadge(testResult.gcs.status)}
                 </CardTitle>
               </CardHeader>
-              <CardContent data-id="gj2egb408" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <div className="space-y-3" data-id="s6hh26auo" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <CardContent data-id="ki35fjzkm" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <div className="space-y-3" data-id="9upg211jb" data-path="src/components/diagnostics/ConnectionTest.tsx">
                   <Button
                     variant="outline"
                     onClick={testGCSConnection}
                     disabled={testResult.gcs.status === 'testing' || !hasServiceAccount}
-                    className="w-full" data-id="hi754onkx" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    className="w-full" data-id="m91c0kkzv" data-path="src/components/diagnostics/ConnectionTest.tsx">
 
                     {testResult.gcs.status === 'testing' ?
                     <>
-                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="qybrka6pj" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="v8sf9sdnu" data-path="src/components/diagnostics/ConnectionTest.tsx" />
                         Testing...
                       </> :
 
@@ -372,12 +372,12 @@ const ConnectionTest: React.FC = () => {
                   </Button>
 
                   {testResult.gcs.message &&
-                  <div className="text-sm" data-id="keii4hi2e" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                      <p className={testResult.gcs.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="zmqusi3gi" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <div className="text-sm" data-id="jxtvu0835" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <p className={testResult.gcs.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="nms7m0ezy" data-path="src/components/diagnostics/ConnectionTest.tsx">
                         {testResult.gcs.message}
                       </p>
                       {testResult.gcs.details &&
-                    <p className="text-gray-600 mt-1" data-id="5e2zydno2" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    <p className="text-gray-600 mt-1" data-id="1851k11m8" data-path="src/components/diagnostics/ConnectionTest.tsx">
                           {testResult.gcs.details}
                         </p>
                     }
@@ -389,10 +389,10 @@ const ConnectionTest: React.FC = () => {
           </div>
 
           {!hasServiceAccount &&
-          <Alert data-id="fdnnu7gbx" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <AlertCircle className="h-4 w-4" data-id="1e6a6z5j1" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-              <AlertDescription data-id="jh3hedvac" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <strong data-id="94mxxitwn" data-path="src/components/diagnostics/ConnectionTest.tsx">Service Account Required:</strong> Please configure your service account in the Production Setup tab before testing connections.
+          <Alert data-id="y6duycj5d" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <AlertCircle className="h-4 w-4" data-id="cpvtttvk4" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <AlertDescription data-id="o6qaz1yu7" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <strong data-id="l83slfjip" data-path="src/components/diagnostics/ConnectionTest.tsx">Service Account Required:</strong> Please configure your service account in the Production Setup tab before testing connections.
               </AlertDescription>
             </Alert>
           }
@@ -400,7 +400,7 @@ const ConnectionTest: React.FC = () => {
       </Card>
 
       {/* API Diagnostics */}
-      <ApiDiagnostics data-id="3sz0s3xno" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+      <ApiDiagnostics data-id="llh1zf8va" data-path="src/components/diagnostics/ConnectionTest.tsx" />
     </div>);
 
 };

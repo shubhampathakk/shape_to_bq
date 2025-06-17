@@ -26,26 +26,26 @@ const ApiDiagnostics = () => {
   const getStatusIcon = (status: DiagnosticResult['status']) => {
     switch (status) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-600" data-id="ia2ca6f68" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
+        return <CheckCircle className="h-5 w-5 text-green-600" data-id="n7eauus5i" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
       case 'error':
-        return <XCircle className="h-5 w-5 text-red-600" data-id="wi4k3sv2q" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
+        return <XCircle className="h-5 w-5 text-red-600" data-id="9nscgq394" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-600" data-id="5jdw3krn5" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
+        return <AlertTriangle className="h-5 w-5 text-yellow-600" data-id="e5r280cb7" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
       case 'pending':
-        return <Clock className="h-5 w-5 text-gray-400" data-id="7fpo44w6l" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
+        return <Clock className="h-5 w-5 text-gray-400" data-id="rzwsvfa5v" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />;
     }
   };
 
   const getStatusBadge = (status: DiagnosticResult['status']) => {
     switch (status) {
       case 'success':
-        return <Badge variant="default" className="bg-green-100 text-green-800" data-id="zlhlz4b8l" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Success</Badge>;
+        return <Badge variant="default" className="bg-green-100 text-green-800" data-id="zwuj2cgva" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Success</Badge>;
       case 'error':
-        return <Badge variant="destructive" data-id="ynoa0e2wj" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Failed</Badge>;
+        return <Badge variant="destructive" data-id="x3xwuz0ws" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Failed</Badge>;
       case 'warning':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800" data-id="2cecl895x" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Warning</Badge>;
+        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800" data-id="qvy2ep59e" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Warning</Badge>;
       case 'pending':
-        return <Badge variant="outline" data-id="l3vuu054u" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Pending</Badge>;
+        return <Badge variant="outline" data-id="o37m86a4l" data-path="src/components/diagnostics/ApiDiagnostics.tsx">Pending</Badge>;
     }
   };
 
@@ -58,19 +58,19 @@ const ApiDiagnostics = () => {
       name: 'Configuration Check',
       status: 'pending',
       message: 'Checking application configuration...',
-      icon: <Network className="h-5 w-5" data-id="edur4yx27" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+      icon: <Network className="h-5 w-5" data-id="cfvrji4ez" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
     },
     {
       name: 'API Connection Test',
       status: 'pending',
       message: 'Testing file processing API connection...',
-      icon: <Upload className="h-5 w-5" data-id="h9c24qffb" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+      icon: <Upload className="h-5 w-5" data-id="syjqrs6zl" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
     },
     {
       name: 'BigQuery Connection Test',
       status: 'pending',
       message: 'Testing BigQuery connection...',
-      icon: <Database className="h-5 w-5" data-id="j2ltjwq31" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+      icon: <Database className="h-5 w-5" data-id="nso8gycxl" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
     }];
 
 
@@ -214,60 +214,60 @@ const ApiDiagnostics = () => {
   };
 
   return (
-    <Card data-id="5lb3tutm7" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-      <CardHeader data-id="7y71gjpyg" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-        <CardTitle className="flex items-center gap-2" data-id="tx7ejh9q4" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-          <Network className="h-5 w-5" data-id="5y4x5x38k" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+    <Card data-id="88bu0xhkq" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+      <CardHeader data-id="qaocm6eh7" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+        <CardTitle className="flex items-center gap-2" data-id="b6wo3qf9q" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+          <Network className="h-5 w-5" data-id="xj3qogawu" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
           API Diagnostics
         </CardTitle>
-        <CardDescription data-id="zlwbsfaf4" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+        <CardDescription data-id="b5tixs8ka" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
           Test your API connections and configuration to troubleshoot issues
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4" data-id="k820hm4uw" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+      <CardContent className="space-y-4" data-id="7f3gxtmmx" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
         <Button
           onClick={runDiagnostics}
           disabled={isRunning}
-          className="w-full" data-id="jx38znv0i" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+          className="w-full" data-id="535qlqvu7" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
 
           {isRunning ?
           <>
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" data-id="b021l4tnl" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+              <RefreshCw className="mr-2 h-4 w-4 animate-spin" data-id="j5b2p72we" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
               Running Diagnostics...
             </> :
 
           <>
-              <RefreshCw className="mr-2 h-4 w-4" data-id="k5vkp1347" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+              <RefreshCw className="mr-2 h-4 w-4" data-id="f4bilqflj" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
               Run Diagnostics
             </>
           }
         </Button>
 
         {results.length > 0 &&
-        <div className="space-y-4" data-id="gkouqnfxr" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-            <Separator data-id="3ayeo048k" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
-            <div className="space-y-3" data-id="drhz35ysx" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+        <div className="space-y-4" data-id="nrnne9peh" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+            <Separator data-id="esdcwz6by" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+            <div className="space-y-3" data-id="qw88scfvx" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
               {results.map((result, index) =>
-            <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg" data-id="x5096azz0" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-                  <div className="flex-shrink-0 mt-0.5" data-id="v2fday4rz" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+            <div key={index} className="flex items-start space-x-3 p-3 border rounded-lg" data-id="8gx8apwwn" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                  <div className="flex-shrink-0 mt-0.5" data-id="y48hmwhek" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
                     {getStatusIcon(result.status)}
                   </div>
-                  <div className="flex-1 min-w-0" data-id="2wrcyikhv" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-                    <div className="flex items-center justify-between" data-id="07styks6b" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-                      <h4 className="text-sm font-medium text-gray-900" data-id="law2359nm" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                  <div className="flex-1 min-w-0" data-id="lylyx6wdx" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                    <div className="flex items-center justify-between" data-id="xlwt9frqm" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                      <h4 className="text-sm font-medium text-gray-900" data-id="1rvj2ftyx" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
                         {result.name}
                       </h4>
                       {getStatusBadge(result.status)}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1" data-id="g0l1zoc60" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                    <p className="text-sm text-gray-600 mt-1" data-id="heslq1kyg" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
                       {result.message}
                     </p>
                     {result.details && result.details.length > 0 &&
-                <div className="mt-2" data-id="n9bu00c2m" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-                        <ul className="text-xs text-gray-500 space-y-1" data-id="ic3aqqc7n" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                <div className="mt-2" data-id="ho1hq80s1" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                        <ul className="text-xs text-gray-500 space-y-1" data-id="qjw8t0988" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
                           {result.details.map((detail, detailIndex) =>
-                    <li key={detailIndex} className="flex items-center" data-id="qkq0zod95" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-                              <span className="w-2 h-2 bg-gray-300 rounded-full mr-2 flex-shrink-0" data-id="ewj8jador" data-path="src/components/diagnostics/ApiDiagnostics.tsx"></span>
+                    <li key={detailIndex} className="flex items-center" data-id="cx4yfbpuy" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+                              <span className="w-2 h-2 bg-gray-300 rounded-full mr-2 flex-shrink-0" data-id="l6qx7vra3" data-path="src/components/diagnostics/ApiDiagnostics.tsx"></span>
                               {detail}
                             </li>
                     )}
@@ -282,18 +282,18 @@ const ApiDiagnostics = () => {
         }
 
         {results.length > 0 && results.some((r) => r.status === 'error') &&
-        <Alert data-id="w8x3zja6f" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-            <AlertTriangle className="h-4 w-4" data-id="dnleyp77p" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
-            <AlertDescription data-id="84ui7m156" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+        <Alert data-id="pnmslhutq" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+            <AlertTriangle className="h-4 w-4" data-id="tlync4n1o" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+            <AlertDescription data-id="efywgewre" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
               Some diagnostics failed. Please check your configuration in Production Setup and verify your API endpoints are accessible.
             </AlertDescription>
           </Alert>
         }
 
         {results.length > 0 && results.every((r) => r.status === 'success') &&
-        <Alert className="border-green-200 bg-green-50" data-id="sgweu9bwe" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
-            <CheckCircle className="h-4 w-4 text-green-600" data-id="fsnxxqd87" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
-            <AlertDescription className="text-green-800" data-id="2gn8wrj0r" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+        <Alert className="border-green-200 bg-green-50" data-id="x73hrxx7a" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
+            <CheckCircle className="h-4 w-4 text-green-600" data-id="2r59n7ims" data-path="src/components/diagnostics/ApiDiagnostics.tsx" />
+            <AlertDescription className="text-green-800" data-id="fos22eafo" data-path="src/components/diagnostics/ApiDiagnostics.tsx">
               All diagnostics passed! Your configuration is ready for processing.
             </AlertDescription>
           </Alert>

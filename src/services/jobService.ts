@@ -8,19 +8,43 @@ import { ProcessingConfig, Job } from '@/types';
 class DynamicJobService {
   private getCurrentService() {
     const isProductionReady = configService.isRealProcessingEnabled();
-    console.log('DynamicJobService: Selecting service', {
+    const config = configService.getConfig();
+
+    console.log('🔧 DynamicJobService: Selecting service', {
       isProductionReady,
-      authMethod: configService.getAuthMethod(),
-      hasServiceAccount: !!configService.getServiceAccountKey(),
-      enableRealProcessing: configService.getConfig().enableRealProcessing
+      authMethod: config.authMethod,
+      hasServiceAccount: !!config.serviceAccountKey,
+      hasApiKey: !!config.apiKey,
+      enableRealProcessing: config.enableRealProcessing,
+      serviceSelected: isProductionReady ? 'PRODUCTION' : 'MOCK'
     });
 
-    return isProductionReady ? productionJobService : mockJobService;
+    if (isProductionReady) {
+      console.log('✅ Using PRODUCTION service - real GCP operations will be performed');
+      return productionJobService;
+    } else {
+      console.log('🎭 Using MOCK service - simulated operations for demonstration');
+
+      // Log why mock mode is being used
+      if (config.authMethod === 'service-account') {
+        console.log('   Reason: Service account mode is not fully implemented in browser environment');
+      } else if (!config.enableRealProcessing) {
+        console.log('   Reason: Real processing is disabled in configuration');
+      } else if (!config.apiKey) {
+        console.log('   Reason: API key not configured for API Gateway mode');
+      } else {
+        console.log('   Reason: Production requirements not met');
+      }
+
+      return mockJobService;
+    }
   }
 
   async createJob(config: ProcessingConfig, userId: string): Promise<Job> {
     const service = this.getCurrentService();
-    console.log('Creating job with service:', service === productionJobService ? 'production' : 'mock');
+    const serviceType = service === productionJobService ? '🚀 PRODUCTION' : '🎭 MOCK';
+    console.log(`${serviceType} service: Creating job`);
+
     return service.createJob(config, userId);
   }
 
@@ -37,6 +61,40 @@ class DynamicJobService {
   subscribeToJobUpdates(jobId: string, callback: (job: Job) => void): () => void {
     const service = this.getCurrentService();
     return service.subscribeToJobUpdates(jobId, callback);
+  }
+
+  // Helper method to check if we're in production mode
+  isUsingProductionService(): boolean {
+    return configService.isRealProcessingEnabled();
+  }
+
+  // Helper method to get current service info
+  getServiceInfo(): {
+    mode: 'production' | 'mock';
+    authMethod: string;
+    ready: boolean;
+    warnings: string[];
+  } {
+    const config = configService.getConfig();
+    const isProduction = this.isUsingProductionService();
+    const warnings: string[] = [];
+
+    if (config.authMethod === 'service-account' && config.enableRealProcessing) {
+      warnings.push('Service account mode is not fully implemented for browser applications');
+      warnings.push('JWT signing cannot be done securely in browsers');
+      warnings.push('Consider using API Gateway mode or server-side authentication');
+    }
+
+    if (!isProduction && config.enableRealProcessing) {
+      warnings.push('Real processing is enabled but requirements are not met');
+    }
+
+    return {
+      mode: isProduction ? 'production' : 'mock',
+      authMethod: config.authMethod || 'service-account',
+      ready: isProduction,
+      warnings
+    };
   }
 }
 
