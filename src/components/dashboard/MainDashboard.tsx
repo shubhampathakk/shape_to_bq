@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,112 +9,104 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { jobService } from '@/services/jobService';
 import { configService } from '@/services/configService';
-import { Job, ProcessingConfig } from '@/types';
-
+import { authService } from '@/services/authService';
+import { ProcessingConfig } from '@/types';
 import FileUploadZone from '@/components/upload/FileUploadZone';
 import GCSPathInput from '@/components/upload/GCSPathInput';
 import SchemaDefinition from '@/components/schema/SchemaDefinition';
 import JobStatus from '@/components/jobs/JobStatus';
 import ProductionSetup from '@/components/configuration/ProductionSetup';
 import ConnectionTest from '@/components/diagnostics/ConnectionTest';
-
+import BigQueryJobChecker from '@/components/diagnostics/BigQueryJobChecker';
+import OAuthManager from '@/components/auth/OAuthManager';
+import OAuthSetupGuide from '@/components/setup/OAuthSetupGuide';
 import {
   Upload,
-  Cloud,
-  Play,
-  AlertTriangle,
-  Database,
-  Zap,
-  Info,
-  ExternalLink,
   Settings,
+  Activity,
+  BarChart3,
+  AlertTriangle,
   CheckCircle,
-  TestTube } from
+  Key,
+  Info,
+  BookOpen } from
 'lucide-react';
 
 const MainDashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [config, setConfig] = useState<ProcessingConfig>({
+  // Processing Configuration State
+  const [processingConfig, setProcessingConfig] = useState<ProcessingConfig>({
     sourceType: 'local',
-    gcpProjectId: configService.getConfig().gcpProjectId || '',
+    gcpProjectId: '',
     targetTable: '',
-    autoDetectSchema: true,
     customSchema: [],
-    integerColumns: ''
+    integerColumns: [],
+    file: undefined,
+    gcsBucket: '',
+    gcsPath: ''
   });
 
-  const [jobs, setJobs] = useState<Job[]>([]);
+  // Schema configuration state
+  const [autoDetectSchema, setAutoDetectSchema] = useState(true);
+
+  // UI State
   const [isProcessing, setIsProcessing] = useState(false);
-  const [envInfo, setEnvInfo] = useState(configService.getEnvironmentInfo());
+  const [showOAuth, setShowOAuth] = useState(false);
 
+  // Load configuration on mount
   useEffect(() => {
-    loadJobs();
-    setEnvInfo(configService.getEnvironmentInfo());
-  }, [user]);
+    const config = configService.getConfig();
+    setProcessingConfig((prev) => ({
+      ...prev,
+      gcpProjectId: config.gcpProjectId || '',
+      targetTable: config.bigQueryDefaultDataset ? `${config.bigQueryDefaultDataset}.processed_data` : ''
+    }));
+  }, []);
 
-  const loadJobs = async () => {
-    if (user) {
-      try {
-        const userJobs = await jobService.getJobs(user.id);
-        setJobs(userJobs);
-      } catch (error) {
-        console.error('Failed to load jobs:', error);
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = () => {
+      if (!authService.isAuthenticated()) {
+        setShowOAuth(true);
       }
-    }
-  };
+    };
 
-  const validateConfig = (): string | null => {
-    if (!config.gcpProjectId.trim()) {
-      return 'GCP Project ID is required';
-    }
+    checkAuth();
+    const interval = setInterval(checkAuth, 30000); // Check every 30 seconds
 
-    if (!config.targetTable.trim()) {
-      return 'Target table is required';
-    }
+    return () => clearInterval(interval);
+  }, []);
 
-    if (!config.targetTable.includes('.')) {
-      return 'Target table must include dataset (e.g., dataset.table)';
-    }
-
-    // Validate BigQuery naming conventions
-    const [dataset, table] = config.targetTable.split('.');
-    if (!dataset || !table) {
-      return 'Invalid table format. Use: dataset.table_name';
-    }
-
-    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(dataset) || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(table)) {
-      return 'Dataset and table names must start with a letter and contain only letters, numbers, and underscores';
-    }
-
-    if (config.sourceType === 'local' && !config.file) {
-      return 'Please select a shapefile to upload';
-    }
-
-    if (config.sourceType === 'gcs' && (!config.gcsPath || !config.gcsBucket)) {
-      return 'Please specify GCS bucket and path';
-    }
-
-    return null;
-  };
-
-  const handleStartProcessing = async () => {
-    const validationError = validateConfig();
-    if (validationError) {
+  const handleProcessFile = async () => {
+    if (!user) {
       toast({
-        title: 'Validation Error',
-        description: validationError,
-        variant: 'destructive'
+        title: "Authentication Required",
+        description: "Please log in to process files.",
+        variant: "destructive"
       });
       return;
     }
 
-    if (!user) {
+    // Validate OAuth authentication
+    if (!authService.isAuthenticated()) {
       toast({
-        title: 'Authentication Error',
-        description: 'Please sign in to start processing',
-        variant: 'destructive'
+        title: "Google OAuth Required",
+        description: "Please authenticate with Google to access BigQuery and Cloud Storage.",
+        variant: "destructive"
+      });
+      setShowOAuth(true);
+      return;
+    }
+
+    // Validate processing configuration
+    const errors = validateProcessingConfig();
+    if (errors.length > 0) {
+      toast({
+        title: "Configuration Invalid",
+        description: errors[0],
+        variant: "destructive"
       });
       return;
     }
@@ -122,291 +114,398 @@ const MainDashboard: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const newJob = await jobService.createJob(config, user.id);
-      setJobs((prevJobs) => [newJob, ...prevJobs]);
+      console.log('🚀 Starting job with configuration:', processingConfig);
+      console.log('📋 Schema configuration:', {
+        autoDetectSchema,
+        customSchemaFields: processingConfig.customSchema?.length || 0,
+        customSchema: processingConfig.customSchema
+      });
 
-      const processingMode = envInfo.realProcessingEnabled ? 'production' : 'demo';
+      // If auto-detect is enabled, clear custom schema
+      const finalConfig = {
+        ...processingConfig,
+        customSchema: autoDetectSchema ? [] : processingConfig.customSchema
+      };
+
+      console.log('🎯 Final config being sent to job service:', finalConfig);
+
+      const job = await jobService.createJob(finalConfig, user.id);
 
       toast({
-        title: 'Job Started',
-        description: `Processing job ${newJob.id} has been started in ${processingMode} mode`,
-        duration: 5000
+        title: "Processing Started! 🚀",
+        description: `Job ${job.id} has been queued for processing.`
       });
 
-      if (!envInfo.realProcessingEnabled) {
-        // Show demo mode warning
-        setTimeout(() => {
-          toast({
-            title: 'Demo Mode Active',
-            description: 'This is a simulation. Configure production settings to load real data to BigQuery.',
-            duration: 8000
-          });
-        }, 2000);
-      } else {
-        // Show production mode confirmation
-        setTimeout(() => {
-          toast({
-            title: 'Production Processing Started',
-            description: 'Your data will be processed and loaded to BigQuery. Check the job status for updates.',
-            duration: 6000
-          });
-        }, 1000);
-      }
-
-      // Reset form
-      setConfig({
-        ...config,
-        file: undefined,
-        gcsPath: '',
-        gcsBucket: ''
-      });
+      console.log('✅ Job created successfully:', job.id);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start processing job';
+      console.error('❌ Job creation failed:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+
       toast({
-        title: 'Processing Error',
+        title: "Processing Failed",
         description: errorMessage,
-        variant: 'destructive'
+        variant: "destructive"
       });
+
+      // Show specific guidance based on error type
+      if (errorMessage.includes('authentication') || errorMessage.includes('OAuth')) {
+        setShowOAuth(true);
+      }
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const runningJobs = jobs.filter((job) =>
-  ['queued', 'converting', 'reading', 'loading'].includes(job.status)
-  );
+  const validateProcessingConfig = (): string[] => {
+    const errors: string[] = [];
+
+    if (!processingConfig.gcpProjectId?.trim()) {
+      errors.push('GCP Project ID is required');
+    }
+
+    if (!processingConfig.targetTable?.trim()) {
+      errors.push('Target table is required');
+    } else if (!processingConfig.targetTable.includes('.')) {
+      errors.push('Target table must include dataset (format: dataset.table)');
+    }
+
+    if (processingConfig.sourceType === 'local' && !processingConfig.file) {
+      errors.push('Please select a file to upload');
+    }
+
+    if (processingConfig.sourceType === 'gcs') {
+      if (!processingConfig.gcsBucket?.trim()) {
+        errors.push('GCS bucket is required for GCS source');
+      }
+      if (!processingConfig.gcsPath?.trim()) {
+        errors.push('GCS path is required for GCS source');
+      }
+    }
+
+    // Schema validation
+    if (!autoDetectSchema && (!processingConfig.customSchema || processingConfig.customSchema.length === 0)) {
+      errors.push('Please define a custom schema or enable auto-detect schema');
+    }
+
+    return errors;
+  };
+
+  const getAuthStatus = () => {
+    if (!authService.isAuthenticated()) {
+      return {
+        status: 'error' as const,
+        message: 'Not authenticated with Google OAuth',
+        action: 'Sign in required'
+      };
+    }
+
+    if (authService.willExpireSoon()) {
+      return {
+        status: 'warning' as const,
+        message: 'OAuth token will expire soon',
+        action: 'Refresh recommended'
+      };
+    }
+
+    return {
+      status: 'success' as const,
+      message: 'Authenticated and ready',
+      action: 'All systems go'
+    };
+  };
+
+  const authStatus = getAuthStatus();
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6" data-id="0v7tpcibo" data-path="src/components/dashboard/MainDashboard.tsx">
+    <div className="container mx-auto p-6 space-y-6" data-id="610vhpoad" data-path="src/components/dashboard/MainDashboard.tsx">
       {/* Header */}
-      <div className="text-center space-y-2" data-id="zqs5aky2t" data-path="src/components/dashboard/MainDashboard.tsx">
-        <h1 className="text-3xl font-bold text-gray-900" data-id="tu62z776a" data-path="src/components/dashboard/MainDashboard.tsx">
-          Geospatial Data Processing
-        </h1>
-        <p className="text-gray-600" data-id="5mk7w3lvd" data-path="src/components/dashboard/MainDashboard.tsx">
-          Upload shapefiles and seamlessly load them into Google BigQuery
-        </p>
-      </div>
+      <div className="flex items-center justify-between" data-id="58x56orlc" data-path="src/components/dashboard/MainDashboard.tsx">
+        <div data-id="voovrmf3l" data-path="src/components/dashboard/MainDashboard.tsx">
+          <h1 className="text-3xl font-bold tracking-tight" data-id="1yg04mku0" data-path="src/components/dashboard/MainDashboard.tsx">GIS Data Processing</h1>
+          <p className="text-muted-foreground" data-id="0ekhvrwqz" data-path="src/components/dashboard/MainDashboard.tsx">
+            Process and load spatial data to BigQuery with OAuth authentication
+          </p>
+        </div>
+        
+        {/* Authentication Status */}
+        <div className="flex items-center gap-2" data-id="kyxembiij" data-path="src/components/dashboard/MainDashboard.tsx">
+          {authStatus.status === 'success' && <CheckCircle className="h-5 w-5 text-green-500" data-id="4n4j19zla" data-path="src/components/dashboard/MainDashboard.tsx" />}
+          {authStatus.status === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-500" data-id="178fjl1jp" data-path="src/components/dashboard/MainDashboard.tsx" />}
+          {authStatus.status === 'error' && <Key className="h-5 w-5 text-red-500" data-id="iga24nt99" data-path="src/components/dashboard/MainDashboard.tsx" />}
+          
+          <div className="text-sm" data-id="126wc2kb5" data-path="src/components/dashboard/MainDashboard.tsx">
+            <div className="font-medium" data-id="5l0rrkuy8" data-path="src/components/dashboard/MainDashboard.tsx">{authStatus.action}</div>
+            <div className="text-muted-foreground" data-id="f5y3aa0me" data-path="src/components/dashboard/MainDashboard.tsx">{authStatus.message}</div>
+          </div>
+          
+          {authStatus.status !== 'success' &&
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowOAuth(true)} data-id="hkno7m41b" data-path="src/components/dashboard/MainDashboard.tsx">
 
-      {/* Environment Status Alert */}
-      <Alert className={`border-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-200 bg-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-50`} data-id="zj5mza0h3" data-path="src/components/dashboard/MainDashboard.tsx">
-        {envInfo.realProcessingEnabled ?
-        <CheckCircle className="h-4 w-4 text-green-600" data-id="cbwxl2g09" data-path="src/components/dashboard/MainDashboard.tsx" /> :
-
-        <Info className="h-4 w-4 text-amber-600" data-id="efpwuletb" data-path="src/components/dashboard/MainDashboard.tsx" />
-        }
-        <AlertDescription className={`text-${envInfo.realProcessingEnabled ? 'green' : 'amber'}-800`} data-id="smeukuatb" data-path="src/components/dashboard/MainDashboard.tsx">
-          <strong data-id="lc5qopgoi" data-path="src/components/dashboard/MainDashboard.tsx">{envInfo.realProcessingEnabled ? 'Production Mode:' : 'Demo Mode:'}</strong>{' '}
-          {envInfo.realProcessingEnabled ?
-          'Real data processing is enabled. Jobs will load data to BigQuery.' :
-
-          'Jobs will simulate the processing pipeline. Configure production settings to load real data.'
+              <Key className="h-4 w-4 mr-1" data-id="dz64zmdfs" data-path="src/components/dashboard/MainDashboard.tsx" />
+              Authenticate
+            </Button>
           }
-          {envInfo.configErrors.length > 0 &&
-          <div className="mt-2" data-id="n9g0pmoi2" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="font-medium" data-id="tehdlbgby" data-path="src/components/dashboard/MainDashboard.tsx">Configuration issues:</p>
-              <ul className="list-disc list-inside text-sm" data-id="y1co8j195" data-path="src/components/dashboard/MainDashboard.tsx">
-                {envInfo.configErrors.map((error, index) =>
-              <li key={index} data-id="6nd1aigvy" data-path="src/components/dashboard/MainDashboard.tsx">{error}</li>
-              )}
-              </ul>
-            </div>
-          }
-        </AlertDescription>
-      </Alert>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-id="adj041l6s" data-path="src/components/dashboard/MainDashboard.tsx">
-        <Card data-id="jrtb281jf" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="kj7j6w1c2" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-blue-100 rounded-full" data-id="my6n07095" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Database className="h-5 w-5 text-blue-600" data-id="15xwcofr3" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </div>
-            <div data-id="g78s42oq3" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="yvbonis1m" data-path="src/components/dashboard/MainDashboard.tsx">Total Jobs</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="hq0z7uziq" data-path="src/components/dashboard/MainDashboard.tsx">{jobs.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-id="r74o2tl5g" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="vmafcf5z2" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-yellow-100 rounded-full" data-id="9lrupg5ep" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Zap className="h-5 w-5 text-yellow-600" data-id="pzsyppm68" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </div>
-            <div data-id="lrmlj40dy" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="1j3xdwx75" data-path="src/components/dashboard/MainDashboard.tsx">Running</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="ahb4hsfk4" data-path="src/components/dashboard/MainDashboard.tsx">{runningJobs.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card data-id="yika8cce4" data-path="src/components/dashboard/MainDashboard.tsx">
-          <CardContent className="p-4 flex items-center space-x-3" data-id="x5s6uopqb" data-path="src/components/dashboard/MainDashboard.tsx">
-            <div className="p-2 bg-green-100 rounded-full" data-id="kfj1nmedj" data-path="src/components/dashboard/MainDashboard.tsx">
-              <Upload className="h-5 w-5 text-green-600" data-id="ok1rel2un" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </div>
-            <div data-id="7e9km84ml" data-path="src/components/dashboard/MainDashboard.tsx">
-              <p className="text-sm text-gray-600" data-id="338tx7vc6" data-path="src/components/dashboard/MainDashboard.tsx">Completed</p>
-              <p className="text-2xl font-bold text-gray-900" data-id="2tmzt5qxa" data-path="src/components/dashboard/MainDashboard.tsx">
-                {jobs.filter((job) => job.status === 'completed').length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="u8ns3dqsf" data-path="src/components/dashboard/MainDashboard.tsx">
-        {/* Main Content Tabs */}
-        <div className="lg:col-span-2" data-id="ofka63c52" data-path="src/components/dashboard/MainDashboard.tsx">
-          <Tabs defaultValue="processing" className="space-y-6" data-id="vxlfikwg6" data-path="src/components/dashboard/MainDashboard.tsx">
-            <TabsList className="grid w-full grid-cols-3" data-id="hitk4magq" data-path="src/components/dashboard/MainDashboard.tsx">
-              <TabsTrigger value="processing" className="flex items-center space-x-2" data-id="1xv7n2jnu" data-path="src/components/dashboard/MainDashboard.tsx">
-                <Play className="h-4 w-4" data-id="9naea7zhv" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="k3lu2lnk2" data-path="src/components/dashboard/MainDashboard.tsx">Data Processing</span>
-              </TabsTrigger>
-              <TabsTrigger value="diagnostics" className="flex items-center space-x-2" data-id="y1wn6q0vg" data-path="src/components/dashboard/MainDashboard.tsx">
-                <TestTube className="h-4 w-4" data-id="c28bncddy" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="8bp8jany0" data-path="src/components/dashboard/MainDashboard.tsx">Diagnostics</span>
-              </TabsTrigger>
-              <TabsTrigger value="configuration" className="flex items-center space-x-2" data-id="fjqksa5uk" data-path="src/components/dashboard/MainDashboard.tsx">
-                <Settings className="h-4 w-4" data-id="trxql36t4" data-path="src/components/dashboard/MainDashboard.tsx" />
-                <span data-id="nxbxg7vvs" data-path="src/components/dashboard/MainDashboard.tsx">Configuration</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="processing" className="space-y-6" data-id="jinsaeto7" data-path="src/components/dashboard/MainDashboard.tsx">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-id="q7ehx3jtp" data-path="src/components/dashboard/MainDashboard.tsx">
-                {/* Processing Configuration */}
-                <Card data-id="jejf0pix5" data-path="src/components/dashboard/MainDashboard.tsx">
-                  <CardHeader data-id="gey097wx0" data-path="src/components/dashboard/MainDashboard.tsx">
-                    <CardTitle data-id="9damdt7wm" data-path="src/components/dashboard/MainDashboard.tsx">New Processing Job</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6" data-id="l6i5p6utz" data-path="src/components/dashboard/MainDashboard.tsx">
-                    {/* Data Source Selection */}
-                    <div data-id="elr2uiavt" data-path="src/components/dashboard/MainDashboard.tsx">
-                      <Label className="text-base font-medium" data-id="k20iosrqd" data-path="src/components/dashboard/MainDashboard.tsx">Data Source</Label>
-                      <Tabs
-                        value={config.sourceType}
-                        onValueChange={(value) => setConfig({
-                          ...config,
-                          sourceType: value as 'local' | 'gcs'
-                        })} data-id="ue1h11wlm" data-path="src/components/dashboard/MainDashboard.tsx">
-
-                        <TabsList className="grid w-full grid-cols-2" data-id="p1jh6pyt3" data-path="src/components/dashboard/MainDashboard.tsx">
-                          <TabsTrigger value="local" className="flex items-center space-x-2" data-id="4a9ddlh3p" data-path="src/components/dashboard/MainDashboard.tsx">
-                            <Upload className="h-4 w-4" data-id="z02vcz2y9" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            <span data-id="y6x7hool2" data-path="src/components/dashboard/MainDashboard.tsx">Local Upload</span>
-                          </TabsTrigger>
-                          <TabsTrigger value="gcs" className="flex items-center space-x-2" data-id="ntkjnuo6z" data-path="src/components/dashboard/MainDashboard.tsx">
-                            <Cloud className="h-4 w-4" data-id="pvrgczg43" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            <span data-id="sjxcpx1t5" data-path="src/components/dashboard/MainDashboard.tsx">GCS Path</span>
-                          </TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="local" className="mt-4" data-id="jfc51aad7" data-path="src/components/dashboard/MainDashboard.tsx">
-                          <FileUploadZone
-                            selectedFile={config.file || null}
-                            onFileSelect={(file) => setConfig({ ...config, file: file || undefined })}
-                            disabled={isProcessing} data-id="sn3vph9jb" data-path="src/components/dashboard/MainDashboard.tsx" />
-
-                        </TabsContent>
-                        
-                        <TabsContent value="gcs" className="mt-4" data-id="sjcktbu0j" data-path="src/components/dashboard/MainDashboard.tsx">
-                          <GCSPathInput
-                            bucket={config.gcsBucket || ''}
-                            path={config.gcsPath || ''}
-                            onBucketChange={(bucket) => setConfig({ ...config, gcsBucket: bucket })}
-                            onPathChange={(path) => setConfig({ ...config, gcsPath: path })}
-                            disabled={isProcessing} data-id="a4f7xxdb0" data-path="src/components/dashboard/MainDashboard.tsx" />
-
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-
-                    {/* GCP Configuration */}
-                    <div className="grid gap-4" data-id="f2na6jsyw" data-path="src/components/dashboard/MainDashboard.tsx">
-                      <div className="space-y-2" data-id="fyobhq6jz" data-path="src/components/dashboard/MainDashboard.tsx">
-                        <Label htmlFor="gcp-project" data-id="kf1t5i3mk" data-path="src/components/dashboard/MainDashboard.tsx">GCP Project ID</Label>
-                        <Input
-                          id="gcp-project"
-                          placeholder="my-gcp-project"
-                          value={config.gcpProjectId}
-                          onChange={(e) => setConfig({ ...config, gcpProjectId: e.target.value })}
-                          disabled={isProcessing} data-id="18kdiwe17" data-path="src/components/dashboard/MainDashboard.tsx" />
-
-                        <p className="text-xs text-gray-500" data-id="tb1i1ibjf" data-path="src/components/dashboard/MainDashboard.tsx">
-                          Enter your Google Cloud Platform project ID
-                        </p>
-                      </div>
-
-                      <div className="space-y-2" data-id="msyrxat1m" data-path="src/components/dashboard/MainDashboard.tsx">
-                        <Label htmlFor="target-table" data-id="3j6el044j" data-path="src/components/dashboard/MainDashboard.tsx">BigQuery Target Table</Label>
-                        <Input
-                          id="target-table"
-                          placeholder="dataset.table_name"
-                          value={config.targetTable}
-                          onChange={(e) => setConfig({ ...config, targetTable: e.target.value })}
-                          disabled={isProcessing} data-id="d57zwh7l7" data-path="src/components/dashboard/MainDashboard.tsx" />
-
-                        <p className="text-xs text-gray-500" data-id="dycmj4944" data-path="src/components/dashboard/MainDashboard.tsx">
-                          Format: dataset.table_name (e.g., geospatial_data.shapefiles)
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Schema Definition */}
-                    <SchemaDefinition
-                      autoDetectSchema={config.autoDetectSchema}
-                      onAutoDetectChange={(enabled) => setConfig({ ...config, autoDetectSchema: enabled })}
-                      customSchema={config.customSchema || []}
-                      onCustomSchemaChange={(schema) => setConfig({ ...config, customSchema: schema })}
-                      integerColumns={config.integerColumns || ''}
-                      onIntegerColumnsChange={(columns) => setConfig({ ...config, integerColumns: columns })}
-                      disabled={isProcessing} data-id="nx1u4zo3f" data-path="src/components/dashboard/MainDashboard.tsx" />
-
-
-                    {/* Process Button */}
-                    <div className="pt-4" data-id="ivtp6j8ub" data-path="src/components/dashboard/MainDashboard.tsx">
-                      <Button
-                        onClick={handleStartProcessing}
-                        disabled={isProcessing}
-                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" data-id="i4szcwquo" data-path="src/components/dashboard/MainDashboard.tsx">
-
-                        {isProcessing ?
-                        <>
-                            <Zap className="mr-2 h-4 w-4 animate-pulse" data-id="g9xhd179h" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            Starting Processing...
-                          </> :
-
-                        <>
-                            <Play className="mr-2 h-4 w-4" data-id="nylhjvet0" data-path="src/components/dashboard/MainDashboard.tsx" />
-                            Start Processing
-                          </>
-                        }
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Job Status */}
-                <div data-id="80wl9ymte" data-path="src/components/dashboard/MainDashboard.tsx">
-                  <JobStatus jobs={jobs} onJobsUpdate={setJobs} data-id="ro4qqqe1j" data-path="src/components/dashboard/MainDashboard.tsx" />
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="diagnostics" className="space-y-6" data-id="pwnxyh5oo" data-path="src/components/dashboard/MainDashboard.tsx">
-              <ConnectionTest projectId={config.gcpProjectId} data-id="z7fsctidm" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </TabsContent>
-
-            <TabsContent value="configuration" data-id="dukzf1j4h" data-path="src/components/dashboard/MainDashboard.tsx">
-              <ProductionSetup data-id="i9u576tun" data-path="src/components/dashboard/MainDashboard.tsx" />
-            </TabsContent>
-          </Tabs>
         </div>
       </div>
+
+      {/* OAuth Manager Modal */}
+      {showOAuth &&
+      <div className="mb-6" data-id="6wllf6otv" data-path="src/components/dashboard/MainDashboard.tsx">
+          <OAuthManager
+          onAuthSuccess={() => {
+            setShowOAuth(false);
+            toast({
+              title: "Authentication Successful ✅",
+              description: "You can now process files with Google Cloud services."
+            });
+          }}
+          onAuthError={(error) => {
+            toast({
+              title: "Authentication Failed",
+              description: error,
+              variant: "destructive"
+            });
+          }} data-id="cyocw1kms" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+          
+          <div className="mt-4 flex justify-center" data-id="tohchgr6m" data-path="src/components/dashboard/MainDashboard.tsx">
+            <Button
+            variant="ghost"
+            onClick={() => setShowOAuth(false)} data-id="yj7q4ysl5" data-path="src/components/dashboard/MainDashboard.tsx">
+
+              Close
+            </Button>
+          </div>
+        </div>
+      }
+
+      {/* Main Content */}
+      <Tabs defaultValue="process" className="space-y-6" data-id="6ev99wt6z" data-path="src/components/dashboard/MainDashboard.tsx">
+        <TabsList className="grid w-full grid-cols-6" data-id="i7idg4mm4" data-path="src/components/dashboard/MainDashboard.tsx">
+          <TabsTrigger value="process" className="flex items-center gap-2" data-id="hdsdatg5z" data-path="src/components/dashboard/MainDashboard.tsx">
+            <Upload className="h-4 w-4" data-id="y1lm3o30w" data-path="src/components/dashboard/MainDashboard.tsx" />
+            Process
+          </TabsTrigger>
+          <TabsTrigger value="status" className="flex items-center gap-2" data-id="6dltcm3ir" data-path="src/components/dashboard/MainDashboard.tsx">
+            <Activity className="h-4 w-4" data-id="sb4nwokd5" data-path="src/components/dashboard/MainDashboard.tsx" />
+            Jobs
+          </TabsTrigger>
+          <TabsTrigger value="diagnostics" className="flex items-center gap-2" data-id="ds96alr3k" data-path="src/components/dashboard/MainDashboard.tsx">
+            <BarChart3 className="h-4 w-4" data-id="86n0e9dyr" data-path="src/components/dashboard/MainDashboard.tsx" />
+            Diagnostics
+          </TabsTrigger>
+          <TabsTrigger value="setup" className="flex items-center gap-2" data-id="gc34222m2" data-path="src/components/dashboard/MainDashboard.tsx">
+            <Settings className="h-4 w-4" data-id="860d94v45" data-path="src/components/dashboard/MainDashboard.tsx" />
+            Setup
+          </TabsTrigger>
+          <TabsTrigger value="checker" className="flex items-center gap-2" data-id="0t2hjsyll" data-path="src/components/dashboard/MainDashboard.tsx">
+            <BarChart3 className="h-4 w-4" data-id="hq4k0ols7" data-path="src/components/dashboard/MainDashboard.tsx" />
+            Job Checker
+          </TabsTrigger>
+          <TabsTrigger value="guide" className="flex items-center gap-2" data-id="hd668c1w9" data-path="src/components/dashboard/MainDashboard.tsx">
+            <BookOpen className="h-4 w-4" data-id="82afkl33r" data-path="src/components/dashboard/MainDashboard.tsx" />
+            OAuth Guide
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Processing Tab */}
+        <TabsContent value="process" className="space-y-6" data-id="xeguf2oty" data-path="src/components/dashboard/MainDashboard.tsx">
+          {/* Authentication Warning */}
+          {!authService.isAuthenticated() &&
+          <Alert variant="destructive" data-id="p1z3q138a" data-path="src/components/dashboard/MainDashboard.tsx">
+              <AlertTriangle className="h-4 w-4" data-id="eqqoucnya" data-path="src/components/dashboard/MainDashboard.tsx" />
+              <AlertDescription data-id="nnkenda03" data-path="src/components/dashboard/MainDashboard.tsx">
+                <div className="flex items-center justify-between" data-id="0zqhlbimu" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <span data-id="eolhtk4fh" data-path="src/components/dashboard/MainDashboard.tsx">Google OAuth authentication is required to process files.</span>
+                  <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOAuth(true)} data-id="6hwj5kfyv" data-path="src/components/dashboard/MainDashboard.tsx">
+
+                    Authenticate Now
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          }
+
+          {/* Configuration Section */}
+          <Card data-id="4lftwpagv" data-path="src/components/dashboard/MainDashboard.tsx">
+            <CardHeader data-id="2lk26eh4p" data-path="src/components/dashboard/MainDashboard.tsx">
+              <CardTitle data-id="kif83n22n" data-path="src/components/dashboard/MainDashboard.tsx">Processing Configuration</CardTitle>
+              <CardDescription data-id="v2hpelsgb" data-path="src/components/dashboard/MainDashboard.tsx">
+                Configure your GCP project and target table settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4" data-id="u6q90vprs" data-path="src/components/dashboard/MainDashboard.tsx">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-id="clvupzkqi" data-path="src/components/dashboard/MainDashboard.tsx">
+                <div className="space-y-2" data-id="ejctsb37q" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <Label htmlFor="gcpProject" data-id="yzyc2c83w" data-path="src/components/dashboard/MainDashboard.tsx">GCP Project ID *</Label>
+                  <Input
+                    id="gcpProject"
+                    placeholder="your-gcp-project-id"
+                    value={processingConfig.gcpProjectId}
+                    onChange={(e) => setProcessingConfig((prev) => ({
+                      ...prev,
+                      gcpProjectId: e.target.value
+                    }))} data-id="art6fseda" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+                </div>
+                
+                <div className="space-y-2" data-id="vg1mfd1x4" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <Label htmlFor="targetTable" data-id="fizja9rgl" data-path="src/components/dashboard/MainDashboard.tsx">Target Table *</Label>
+                  <Input
+                    id="targetTable"
+                    placeholder="dataset.table_name"
+                    value={processingConfig.targetTable}
+                    onChange={(e) => setProcessingConfig((prev) => ({
+                      ...prev,
+                      targetTable: e.target.value
+                    }))} data-id="tv9ef347b" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+                </div>
+              </div>
+
+              <Alert data-id="w995wvnur" data-path="src/components/dashboard/MainDashboard.tsx">
+                <Info className="h-4 w-4" data-id="6eif61hne" data-path="src/components/dashboard/MainDashboard.tsx" />
+                <AlertDescription data-id="9m4quzf1k" data-path="src/components/dashboard/MainDashboard.tsx">
+                  <strong data-id="rkbdmrkmp" data-path="src/components/dashboard/MainDashboard.tsx">Requirements:</strong> Ensure BigQuery and Cloud Storage APIs are enabled in your GCP project. 
+                  You need OAuth permissions for BigQuery and Cloud Storage access. 
+                  <Button
+                    variant="link"
+                    className="p-0 h-auto ml-1"
+                    onClick={() => setShowOAuth(true)} data-id="tb4hkgl5s" data-path="src/components/dashboard/MainDashboard.tsx">
+
+                    Click here to authenticate
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+
+          {/* Data Source Selection */}
+          <Tabs
+            value={processingConfig.sourceType}
+            onValueChange={(value) => setProcessingConfig((prev) => ({
+              ...prev,
+              sourceType: value as 'local' | 'gcs'
+            }))} data-id="n5u1z7u0y" data-path="src/components/dashboard/MainDashboard.tsx">
+
+            <TabsList className="grid w-full grid-cols-2" data-id="1ugh8l2n0" data-path="src/components/dashboard/MainDashboard.tsx">
+              <TabsTrigger value="local" data-id="iy1j74g5q" data-path="src/components/dashboard/MainDashboard.tsx">Upload File</TabsTrigger>
+              <TabsTrigger value="gcs" data-id="fkn4vwo57" data-path="src/components/dashboard/MainDashboard.tsx">GCS Path</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="local" data-id="87ogyucb3" data-path="src/components/dashboard/MainDashboard.tsx">
+              <FileUploadZone
+                onFileSelect={(file) => setProcessingConfig((prev) => ({
+                  ...prev,
+                  file
+                }))}
+                selectedFile={processingConfig.file} data-id="xpiysjtq7" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+            </TabsContent>
+            
+            <TabsContent value="gcs" data-id="gkwh17u8a" data-path="src/components/dashboard/MainDashboard.tsx">
+              <GCSPathInput
+                bucket={processingConfig.gcsBucket}
+                path={processingConfig.gcsPath}
+                onBucketChange={(bucket) => setProcessingConfig((prev) => ({
+                  ...prev,
+                  gcsBucket: bucket
+                }))}
+                onPathChange={(path) => setProcessingConfig((prev) => ({
+                  ...prev,
+                  gcsPath: path
+                }))} data-id="ypliuvbj8" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+            </TabsContent>
+          </Tabs>
+
+          {/* Schema Configuration */}
+          <SchemaDefinition
+            autoDetectSchema={autoDetectSchema}
+            onAutoDetectChange={setAutoDetectSchema}
+            customSchema={processingConfig.customSchema || []}
+            onCustomSchemaChange={(schema) => setProcessingConfig((prev) => ({
+              ...prev,
+              customSchema: schema
+            }))}
+            integerColumns={processingConfig.integerColumns?.join('|') || ''}
+            onIntegerColumnsChange={(columns) => setProcessingConfig((prev) => ({
+              ...prev,
+              integerColumns: columns.split('|').filter((col) => col.trim())
+            }))} data-id="86qhkge6c" data-path="src/components/dashboard/MainDashboard.tsx" />
+
+
+          {/* Process Button */}
+          <Card data-id="poscom590" data-path="src/components/dashboard/MainDashboard.tsx">
+            <CardContent className="pt-6" data-id="flxwdthuf" data-path="src/components/dashboard/MainDashboard.tsx">
+              <Button
+                onClick={handleProcessFile}
+                disabled={isProcessing || !authService.isAuthenticated()}
+                className="w-full"
+                size="lg" data-id="8f4pgz8ya" data-path="src/components/dashboard/MainDashboard.tsx">
+
+                {isProcessing ?
+                <>
+                    <Activity className="h-4 w-4 mr-2 animate-spin" data-id="8812014lf" data-path="src/components/dashboard/MainDashboard.tsx" />
+                    Processing...
+                  </> :
+
+                <>
+                    <Upload className="h-4 w-4 mr-2" data-id="ln3g58noa" data-path="src/components/dashboard/MainDashboard.tsx" />
+                    Start Processing
+                  </>
+                }
+              </Button>
+              
+              {!authService.isAuthenticated() &&
+              <p className="text-center text-sm text-muted-foreground mt-2" data-id="xhriylkop" data-path="src/components/dashboard/MainDashboard.tsx">
+                  Please authenticate with Google OAuth to continue. 
+                  <Button
+                  variant="link"
+                  className="p-0 h-auto ml-1"
+                  onClick={() => setShowOAuth(true)} data-id="4yalon696" data-path="src/components/dashboard/MainDashboard.tsx">
+
+                    Sign in now
+                  </Button>
+                </p>
+              }
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Job Status Tab */}
+        <TabsContent value="status" data-id="vq7rue4ms" data-path="src/components/dashboard/MainDashboard.tsx">
+          <JobStatus data-id="x732bqyxn" data-path="src/components/dashboard/MainDashboard.tsx" />
+        </TabsContent>
+
+        {/* Diagnostics Tab */}
+        <TabsContent value="diagnostics" data-id="ttlxp120m" data-path="src/components/dashboard/MainDashboard.tsx">
+          <ConnectionTest data-id="fjpb01o74" data-path="src/components/dashboard/MainDashboard.tsx" />
+        </TabsContent>
+
+        {/* Setup Tab */}
+        <TabsContent value="setup" data-id="x9kx071c1" data-path="src/components/dashboard/MainDashboard.tsx">
+          <ProductionSetup data-id="3hlfpgrsj" data-path="src/components/dashboard/MainDashboard.tsx" />
+        </TabsContent>
+
+        {/* Job Checker Tab */}
+        <TabsContent value="checker" data-id="80x6hh3nn" data-path="src/components/dashboard/MainDashboard.tsx">
+          <BigQueryJobChecker data-id="k0tyc00ch" data-path="src/components/dashboard/MainDashboard.tsx" />
+        </TabsContent>
+
+        {/* OAuth Guide Tab */}
+        <TabsContent value="guide" data-id="6wtchw2hc" data-path="src/components/dashboard/MainDashboard.tsx">
+          <OAuthSetupGuide data-id="jyb4eu6ke" data-path="src/components/dashboard/MainDashboard.tsx" />
+        </TabsContent>
+      </Tabs>
     </div>);
 
 };

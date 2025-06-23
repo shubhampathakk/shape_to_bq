@@ -13,6 +13,13 @@ interface AppConfig {
   serviceAccountKey?: string;
 }
 
+interface OAuthConfig {
+  googleClientId?: string;
+  googleClientSecret?: string;
+}
+
+export const DEFAULT_GOOGLE_CLIENT_ID = 'your-google-client-id.apps.googleusercontent.com';
+
 class ConfigService {
   private config: AppConfig;
   private readonly STORAGE_KEY = 'gis_app_config';
@@ -58,7 +65,8 @@ class ConfigService {
       hasApiKey: !!this.config.apiKey,
       defaultBucket: this.config.gcsDefaultBucket,
       isProductionReady: this.isProductionReady(),
-      isRealProcessingEnabled: this.isRealProcessingEnabled()
+      isRealProcessingEnabled: this.isRealProcessingEnabled(),
+      oauthConfigured: this.isOAuthConfigured()
     });
 
     // Show important warnings for service account mode
@@ -136,6 +144,15 @@ class ConfigService {
     return this.config.serviceAccountKey;
   }
 
+  // Check if OAuth is properly configured
+  private isOAuthConfigured(): boolean {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+    return clientId &&
+    clientId !== DEFAULT_GOOGLE_CLIENT_ID &&
+    !clientId.includes('your-google-client-id') &&
+    clientId.endsWith('.apps.googleusercontent.com');
+  }
+
   isRealProcessingEnabled(): boolean {
     // Real processing is enabled if:
     // 1. The flag is explicitly enabled AND
@@ -162,8 +179,8 @@ class ConfigService {
     } else if (this.config.authMethod === 'api-gateway') {
       return !!(this.config.apiEndpoint && this.config.apiKey);
     } else if (this.config.authMethod === 'oauth') {
-      // OAuth is valid if we have basic configuration - actual tokens are handled at runtime
-      return true; // OAuth is always considered valid as it's user-initiated
+      // OAuth is valid if properly configured
+      return this.isOAuthConfigured();
     }
     return false;
   }
@@ -211,7 +228,8 @@ class ConfigService {
       hasApiKey: !!this.config.apiKey,
       defaultBucket: this.config.gcsDefaultBucket,
       isProductionReady: this.isProductionReady(),
-      isRealProcessingEnabled: this.isRealProcessingEnabled()
+      isRealProcessingEnabled: this.isRealProcessingEnabled(),
+      oauthConfigured: this.isOAuthConfigured()
     });
   }
 
@@ -254,11 +272,21 @@ class ConfigService {
       errors.push('❌ Service account authentication is not supported in browser applications');
       errors.push('Please use OAuth or API Gateway authentication instead');
     } else if (this.config.authMethod === 'oauth') {
+      // OAuth validation
+      if (!this.isOAuthConfigured()) {
+        errors.push('Google OAuth client ID is not properly configured');
+        errors.push('Please set VITE_GOOGLE_CLIENT_ID in your .env file with a valid Google Client ID');
+      }
+    }
+    return errors;
+  }
 
-
-      // OAuth has no specific configuration requirements
-      // The OAuth flow will handle authentication at runtime
-    }return errors;
+  // Method to get OAuth configuration
+  async getOAuthConfig(): Promise<OAuthConfig> {
+    return {
+      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      googleClientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET
+    };
   }
 
   getEnvironmentInfo(): {
@@ -270,12 +298,12 @@ class ConfigService {
     defaultBucket?: string;
     projectId?: string;
     implementationWarnings: string[];
+    oauthConfigured: boolean;
+    oauthClientId?: string;
   } {
-    const authConfigured = this.config.authMethod === 'service-account' ?
-    false : // Service account never configured in browser
-    this.config.authMethod === 'api-gateway' ?
-    !!(this.config.apiEndpoint && this.config.apiKey) :
-    true; // OAuth is always considered configured
+    const authConfigured = this.config.authMethod === 'service-account' ? false : // Service account never configured in browser
+    this.config.authMethod === 'api-gateway' ? !!(this.config.apiEndpoint && this.config.apiKey) :
+    this.isOAuthConfigured(); // OAuth configured check
 
     const productionReady = this.isProductionReady();
     const implementationWarnings: string[] = [];
@@ -288,6 +316,17 @@ class ConfigService {
       implementationWarnings.push('Please use OAuth (recommended) or API Gateway authentication');
     }
 
+    // Add warnings for OAuth configuration issues
+    if (this.config.authMethod === 'oauth' && !this.isOAuthConfigured()) {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+      if (!clientId) {
+        implementationWarnings.push('VITE_GOOGLE_CLIENT_ID is not set in environment variables');
+      } else if (clientId === DEFAULT_GOOGLE_CLIENT_ID || clientId.includes('your-google-client-id')) {
+        implementationWarnings.push('VITE_GOOGLE_CLIENT_ID appears to be a placeholder value');
+        implementationWarnings.push('Please replace with a valid Google Client ID from Google Cloud Console');
+      }
+    }
+
     return {
       environment: this.config.environment,
       realProcessingEnabled: this.isRealProcessingEnabled(),
@@ -296,7 +335,9 @@ class ConfigService {
       productionReady,
       defaultBucket: this.config.gcsDefaultBucket,
       projectId: this.getGcpProjectFromServiceAccount(),
-      implementationWarnings
+      implementationWarnings,
+      oauthConfigured: this.isOAuthConfigured(),
+      oauthClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
     };
   }
 
@@ -306,12 +347,14 @@ class ConfigService {
       if (this.config.authMethod === 'api-gateway') {
         console.log('🎯 Auto-enabling real processing - API Gateway authentication is valid');
         this.updateConfig({ enableRealProcessing: true });
-      } else if (this.config.authMethod === 'oauth') {
-        console.log('🎯 Auto-enabling real processing - OAuth authentication is available');
+      } else if (this.config.authMethod === 'oauth' && this.isOAuthConfigured()) {
+        console.log('🎯 Auto-enabling real processing - OAuth authentication is properly configured');
         this.updateConfig({ enableRealProcessing: true });
       }
     } else if (this.config.authMethod === 'service-account') {
       console.log('🚫 Not enabling real processing - Service account mode is not supported in browsers');
+    } else if (this.config.authMethod === 'oauth' && !this.isOAuthConfigured()) {
+      console.log('🚫 Not enabling real processing - OAuth is not properly configured');
     }
   }
 
@@ -365,19 +408,23 @@ class ConfigService {
     scopes: string[];
     redirectUri: string;
     authUrl: string;
+    isConfigured: boolean;
   } {
-    const redirectUri = window.location.origin + '/oauth/callback';
+    const redirectUri = window.location.origin + '/auth/callback';
     const scopes = [
     'https://www.googleapis.com/auth/bigquery',
     'https://www.googleapis.com/auth/cloud-platform',
     'https://www.googleapis.com/auth/devstorage.read_write'];
 
 
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || DEFAULT_GOOGLE_CLIENT_ID;
+
     return {
-      clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com',
+      clientId,
       scopes,
       redirectUri,
-      authUrl: 'https://accounts.google.com/oauth2/v2/auth'
+      authUrl: 'https://accounts.google.com/oauth2/v2/auth',
+      isConfigured: this.isOAuthConfigured()
     };
   }
 }

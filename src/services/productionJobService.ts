@@ -1,328 +1,592 @@
-import { Job, JobLog, ProcessingConfig } from '@/types';
-import { bigQueryService } from './bigqueryService';
+import { Job, JobStatus, ProcessingJob, ProcessingConfig } from '@/types';
+import { bigqueryService } from './bigqueryService';
 import { fileProcessingService } from './fileProcessingService';
 import { gcsService } from './gcsService';
+import { jobService as mockJobService } from './mockJobService';
+import { configService } from './configService';
 
-// Production Job Service with Real API Integration
 class ProductionJobService {
-  private jobs: Map<string, Job> = new Map();
-  private jobCounter = 1;
+  private jobs: Map<string, ProcessingJob> = new Map();
+  private jobUpdateCallbacks: Set<() => void> = new Set();
 
-  private addLog(jobId: string, level: 'info' | 'warn' | 'error', message: string): void {
-    const job = this.jobs.get(jobId);
-    if (job) {
-      job.logs.push({
-        timestamp: new Date(),
-        level,
-        message
-      });
-      console.log(`[${level.toUpperCase()}] Job ${jobId}: ${message}`);
-    }
+  private log(level: 'INFO' | 'WARN' | 'ERROR', jobId: string, message: string) {
+    console.log(`[${level}] Job ${jobId}: ${message}`);
   }
 
-  private updateJobStatus(jobId: string, status: Job['status'], progress: number = 0): void {
+  addJobUpdateCallback(callback: () => void) {
+    this.jobUpdateCallbacks.add(callback);
+  }
+
+  removeJobUpdateCallback(callback: () => void) {
+    this.jobUpdateCallbacks.delete(callback);
+  }
+
+  private notifyJobUpdate() {
+    this.jobUpdateCallbacks.forEach((callback) => {
+      try {
+        callback();
+      } catch (error) {
+        console.error('Job update callback error:', error);
+      }
+    });
+  }
+
+  private updateJobStatus(jobId: string, status: JobStatus, progress: number, error?: string) {
     const job = this.jobs.get(jobId);
     if (job) {
       job.status = status;
       job.progress = progress;
-      if (status === 'completed' || status === 'failed') {
-        job.endTime = new Date();
+      job.lastUpdated = new Date();
+      if (error) {
+        job.error = error;
       }
-      console.log(`Job ${jobId} status updated: ${status} (${progress}%)`);
+      this.log('INFO', jobId, `Status updated: ${status} (${progress}%)`);
+      this.notifyJobUpdate();
     }
   }
 
+  // New method that matches the interface expected by DynamicJobService
   async createJob(config: ProcessingConfig, userId: string): Promise<Job> {
-    // Validate configuration
-    this.validateConfig(config);
+    const jobId = `job_${Date.now()}`;
 
-    const jobId = `job_${this.jobCounter++}`;
+    console.log('🚀 ProductionJobService: Creating job with config:', config);
 
-    const job: Job = {
+    // Validate input parameters
+    if (!config.file && config.sourceType === 'local') {
+      throw new Error('File is required for local file processing');
+    }
+
+    if (!config.file?.name && config.sourceType === 'local') {
+      throw new Error('File name is required');
+    }
+
+    if (!config.gcpProjectId) {
+      throw new Error('GCP Project ID is required');
+    }
+
+    if (!config.targetTable) {
+      throw new Error('Target table is required');
+    }
+
+    // Parse dataset and table from targetTable (format: dataset.table)
+    const [datasetId, tableId] = config.targetTable.split('.');
+    if (!datasetId || !tableId) {
+      throw new Error('Target table must be in format: dataset.table');
+    }
+
+    // For GCS source, validate bucket and path
+    if (config.sourceType === 'gcs') {
+      if (!config.gcsBucket) {
+        throw new Error('GCS bucket is required for GCS source');
+      }
+      if (!config.gcsPath) {
+        throw new Error('GCS path is required for GCS source');
+      }
+    }
+
+    // Prepare schema - only use custom schema if it has fields
+    const useCustomSchema = config.customSchema && config.customSchema.length > 0;
+    const schema = useCustomSchema ? config.customSchema : undefined;
+
+    console.log('📋 Schema processing:', {
+      hasCustomSchema: !!config.customSchema,
+      customSchemaLength: config.customSchema?.length || 0,
+      useCustomSchema,
+      finalSchema: schema?.length || 0
+    });
+
+    // Create job based on source type
+    if (config.sourceType === 'local' && config.file) {
+      return this.createJobFromFile(
+        config.file,
+        config.gcsPath || `uploads/${config.file.name}`,
+        schema,
+        datasetId,
+        tableId
+      );
+    } else if (config.sourceType === 'gcs') {
+      return this.createJobFromGCS(
+        config.gcsBucket!,
+        config.gcsPath!,
+        schema,
+        datasetId,
+        tableId
+      );
+    } else {
+      throw new Error('Invalid source type or missing file');
+    }
+  }
+
+  // Original method for file-based processing
+  async createJobFromFile(
+  file: File,
+  gcsPath: string,
+  schema: any,
+  datasetId: string,
+  tableId: string)
+  : Promise<Job> {
+    const jobId = `job_${Date.now()}`;
+
+    // Validate input parameters
+    if (!file) {
+      throw new Error('File parameter is required');
+    }
+
+    if (!file.name) {
+      throw new Error('File name is required');
+    }
+
+    if (typeof file.size === 'undefined') {
+      throw new Error('File size is undefined');
+    }
+
+    if (!gcsPath) {
+      throw new Error('GCS path is required');
+    }
+
+    if (!datasetId) {
+      throw new Error('Dataset ID is required');
+    }
+
+    if (!tableId) {
+      throw new Error('Table ID is required');
+    }
+
+    const job: ProcessingJob = {
       id: jobId,
-      userId,
-      status: 'queued',
+      fileName: file.name,
+      fileSize: file.size,
+      gcsPath,
+      schema,
+      datasetId,
+      tableId,
+      status: 'pending',
       progress: 0,
-      sourceType: config.sourceType,
-      fileName: config.file?.name,
-      gcsPath: config.gcsPath,
-      gcpProjectId: config.gcpProjectId,
-      targetTable: config.targetTable,
-      schema: config.customSchema,
-      integerColumns: config.integerColumns,
-      startTime: new Date(),
-      logs: [{
-        timestamp: new Date(),
-        level: 'info',
-        message: 'Job created and queued for processing'
-      }]
+      createdAt: new Date(),
+      lastUpdated: new Date()
     };
 
     this.jobs.set(jobId, job);
+    this.log('INFO', jobId, `Job created for file: ${file.name} (${file.size} bytes)`);
+    this.notifyJobUpdate();
 
     // Start processing asynchronously
-    this.processJob(jobId, config);
+    this.processFileJob(jobId, file, gcsPath, schema, datasetId, tableId).catch((error) => {
+      this.log('ERROR', jobId, `Job processing failed: ${error.message}`);
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+    });
 
-    return job;
+    return this.convertToJob(job);
   }
 
-  private validateConfig(config: ProcessingConfig): void {
-    const errors: string[] = [];
+  // New method for GCS-based processing
+  async createJobFromGCS(
+  gcsBucket: string,
+  gcsPath: string,
+  schema: any,
+  datasetId: string,
+  tableId: string)
+  : Promise<Job> {
+    const jobId = `job_${Date.now()}`;
 
-    if (!config.gcpProjectId?.trim()) {
-      errors.push('GCP Project ID is required');
-    }
+    const job: ProcessingJob = {
+      id: jobId,
+      fileName: gcsPath.split('/').pop() || 'unknown',
+      fileSize: 0, // Unknown for GCS files
+      gcsPath: `gs://${gcsBucket}/${gcsPath}`,
+      schema,
+      datasetId,
+      tableId,
+      status: 'pending',
+      progress: 0,
+      createdAt: new Date(),
+      lastUpdated: new Date()
+    };
 
-    if (!config.targetTable?.trim()) {
-      errors.push('Target table is required');
-    } else if (!config.targetTable.includes('.')) {
-      errors.push('Target table must include dataset (format: dataset.table)');
-    }
+    this.jobs.set(jobId, job);
+    this.log('INFO', jobId, `Job created for GCS file: gs://${gcsBucket}/${gcsPath}`);
+    this.notifyJobUpdate();
 
-    if (config.sourceType === 'local' && !config.file) {
-      errors.push('File is required for local processing');
-    }
+    // Start processing asynchronously
+    this.processGCSJob(jobId, gcsBucket, gcsPath, schema, datasetId, tableId).catch((error) => {
+      this.log('ERROR', jobId, `Job processing failed: ${error.message}`);
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+    });
 
-    if (config.sourceType === 'gcs' && (!config.gcsPath || !config.gcsBucket)) {
-      errors.push('GCS bucket and path are required');
-    }
-
-    if (errors.length > 0) {
-      throw new Error(`Validation failed: ${errors.join(', ')}`);
-    }
+    return this.convertToJob(job);
   }
 
-  private async processJob(jobId: string, config: ProcessingConfig): Promise<void> {
-    const job = this.jobs.get(jobId);
-    if (!job) return;
-
+  private async processFileJob(
+  jobId: string,
+  file: File,
+  gcsPath: string,
+  schema: any,
+  datasetId: string,
+  tableId: string)
+  : Promise<void> {
     try {
-      // Step 1: Test BigQuery connection
-      this.updateJobStatus(jobId, 'converting', 5);
-      this.addLog(jobId, 'info', `Testing connection to BigQuery project: ${config.gcpProjectId}`);
+      this.log('INFO', jobId, 'Starting job processing...');
 
-      const connectionValid = await bigQueryService.testConnection(config.gcpProjectId);
-      if (!connectionValid) {
-        throw new Error('Failed to connect to BigQuery. Check your project ID and permissions.');
+      // Validate parameters again
+      if (!file) {
+        throw new Error('File parameter is undefined in processJob');
       }
 
-      this.addLog(jobId, 'info', 'BigQuery connection successful');
-
-      // Step 2: File upload (if local)
-      let sourceUri: string;
-
-      if (config.sourceType === 'local' && config.file) {
-        this.updateJobStatus(jobId, 'converting', 10);
-        this.addLog(jobId, 'info', 'Uploading file to Google Cloud Storage...');
-
-        try {
-          // Test GCS connection first
-          const gcsTest = await gcsService.testConnection();
-          if (!gcsTest.success) {
-            throw new Error(`GCS connection failed: ${gcsTest.error}. Please check your service account configuration.`);
-          }
-
-          this.addLog(jobId, 'info', `Using ${gcsTest.method} authentication for GCS upload`);
-
-          // Upload file directly to GCS
-          this.updateJobStatus(jobId, 'converting', 15);
-          this.addLog(jobId, 'info', 'Starting file upload...');
-
-          const uploadResult = await gcsService.uploadFile(config.file);
-          sourceUri = uploadResult.gcsUri;
-
-          this.addLog(jobId, 'info', `File uploaded successfully to: ${sourceUri}`);
-          this.addLog(jobId, 'info', `Upload details: Bucket: ${uploadResult.bucket}, Size: ${Math.round(uploadResult.size / 1024)}KB`);
-
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown upload error';
-
-          // Provide specific error guidance based on the error type
-          if (errorMessage.includes('Service account')) {
-            this.addLog(jobId, 'error', 'Service account authentication failed');
-            this.addLog(jobId, 'info', 'Troubleshooting suggestions:');
-            this.addLog(jobId, 'info', '• Verify your service account key is valid JSON');
-            this.addLog(jobId, 'info', '• Ensure the service account has Storage Object Admin role');
-            this.addLog(jobId, 'info', '• Check that the service account key has not expired');
-          } else if (errorMessage.includes('timeout')) {
-            this.addLog(jobId, 'error', 'File upload timed out');
-            this.addLog(jobId, 'info', 'Try uploading a smaller file or check your network connection');
-          } else if (errorMessage.includes('size')) {
-            this.addLog(jobId, 'error', 'File size exceeds limit');
-            this.addLog(jobId, 'info', 'Please ensure your file is under 100MB');
-          } else {
-            this.addLog(jobId, 'error', 'GCS upload failed');
-            this.addLog(jobId, 'info', 'Please verify your GCS configuration in Production Setup');
-          }
-
-          throw new Error(`File upload failed: ${errorMessage}`);
-        }
-      } else {
-        sourceUri = `gs://${config.gcsBucket}/${config.gcsPath}`;
+      if (!file.name) {
+        throw new Error('File name is undefined in processJob');
       }
 
-      // Step 3: Process shapefile (simulated - in production would use actual processing)
-      this.updateJobStatus(jobId, 'reading', 30);
-      this.addLog(jobId, 'info', 'Processing shapefile and converting to BigQuery format...');
+      this.updateJobStatus(jobId, 'uploading', 10);
 
-      // Simulate processing with realistic delay
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Step 1: Upload original file to GCS
+      this.log('INFO', jobId, 'Uploading file to GCS...');
+      try {
+        await gcsService.uploadFile(file, gcsPath);
+        this.log('INFO', jobId, 'File uploaded to GCS successfully');
+      } catch (uploadError) {
+        // Continue even if upload fails (file might already exist)
+        this.log('WARN', jobId, `GCS upload warning: ${uploadError}`);
+      }
 
-      // Mock processed file result (in production, would come from actual processing)
-      const processedFile = {
-        gcsUri: sourceUri.replace('.zip', '_processed.newline_delimited_json'),
-        recordCount: Math.floor(Math.random() * 1000) + 100, // Random between 100-1100
-        schema: [
-        { name: 'id', type: 'INTEGER', mode: 'REQUIRED' },
-        { name: 'name', type: 'STRING', mode: 'NULLABLE' },
-        { name: 'geometry', type: 'GEOGRAPHY', mode: 'NULLABLE' },
-        { name: 'properties', type: 'JSON', mode: 'NULLABLE' }],
+      this.updateJobStatus(jobId, 'processing', 30);
 
-        errors: [],
-        warnings: []
-      };
-
-      this.addLog(jobId, 'info', `Processed ${processedFile.recordCount} records`);
-      this.addLog(jobId, 'info', `Schema detected with ${processedFile.schema.length} columns`);
-
-      // Step 4: Create BigQuery table
-      this.updateJobStatus(jobId, 'loading', 60);
-      const [datasetId, tableId] = config.targetTable.split('.');
-
-      this.addLog(jobId, 'info', `Creating BigQuery table: ${config.targetTable}`);
+      // Step 2: Process the file
+      this.log('INFO', jobId, 'Processing file...');
+      let processedFileUrl: string;
+      let recordCount: number;
 
       try {
-        await bigQueryService.createTable({
-          projectId: config.gcpProjectId,
-          datasetId,
-          tableId
-        }, processedFile.schema);
+        const processingResult = await fileProcessingService.processFile(
+          file,
+          schema,
+          (progress) => {
+            // Update progress during file processing (30-60%)
+            const adjustedProgress = 30 + progress * 0.3;
+            this.updateJobStatus(jobId, 'processing', adjustedProgress);
+          }
+        );
 
-        this.addLog(jobId, 'info', 'Table created successfully');
-      } catch (error) {
-        // Table might already exist
-        this.addLog(jobId, 'warn', 'Table may already exist, proceeding with data load');
+        processedFileUrl = processingResult.processedFileUrl;
+        recordCount = processingResult.recordCount;
+        this.log('INFO', jobId, `File processed successfully. Records: ${recordCount}`);
+      } catch (processingError) {
+        throw new Error(`File processing failed: ${processingError.message}`);
+      }
+
+      this.updateJobStatus(jobId, 'loading', 70);
+
+      // Step 3: Create dataset and table (only if we have a custom schema)
+      if (schema && schema.length > 0) {
+        this.log('INFO', jobId, 'Creating BigQuery dataset and table with custom schema...');
+        try {
+          const config = configService.getConfig();
+          const bigQueryConfig = {
+            projectId: config.gcpProjectId || 'gcve-demo-408018',
+            datasetId,
+            tableId
+          };
+
+          await bigqueryService.createTable(bigQueryConfig, schema);
+          this.log('INFO', jobId, 'Table created successfully with custom schema');
+        } catch (tableError) {
+          // Continue if table already exists
+          if (tableError.message?.includes('409') || tableError.message?.includes('already exists')) {
+            this.log('INFO', jobId, 'Table already exists, continuing...');
+          } else {
+            throw new Error(`Table creation failed: ${tableError.message}`);
+          }
+        }
+      } else {
+        this.log('INFO', jobId, 'Skipping table creation - will use BigQuery auto-detect schema');
+      }
+
+      this.updateJobStatus(jobId, 'loading', 80);
+
+      // Step 4: Validate processed file exists
+      this.log('INFO', jobId, 'Validating processed file...');
+      const fileExists = await fileProcessingService.validateProcessedFile(processedFileUrl);
+      if (!fileExists) {
+        throw new Error(`Processed file not found: ${processedFileUrl}`);
       }
 
       // Step 5: Load data to BigQuery
-      this.updateJobStatus(jobId, 'loading', 80);
-      this.addLog(jobId, 'info', 'Loading data to BigQuery...');
-
-      const bqJobId = await bigQueryService.loadDataFromGCS({
-        projectId: config.gcpProjectId,
-        datasetId,
-        tableId
-      }, processedFile.gcsUri, processedFile.schema);
-
-      this.addLog(jobId, 'info', `BigQuery load job started: ${bqJobId}`);
-
-      // Step 6: Monitor BigQuery job
-      let bqJobComplete = false;
-      let attempts = 0;
-      const maxAttempts = 60; // 5 minutes with 5-second intervals
-
-      while (!bqJobComplete && attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds
-        attempts++;
-
-        const bqStatus = await bigQueryService.getJobStatus(bqJobId);
-
-        if (bqStatus.status === 'DONE') {
-          if (bqStatus.errors && bqStatus.errors.length > 0) {
-            const errorMessages = bqStatus.errors.map((err) => err.message).join(', ');
-            throw new Error(`BigQuery load failed: ${errorMessages}`);
-          }
-
-          bqJobComplete = true;
-          const rowsLoaded = bqStatus.statistics?.load?.outputRows || '0';
-          this.addLog(jobId, 'info', `✅ Successfully loaded ${rowsLoaded} rows to BigQuery`);
-          this.addLog(jobId, 'info', `Data is now available in: ${config.gcpProjectId}.${config.targetTable}`);
-
-        } else if (bqStatus.status === 'RUNNING') {
-          this.updateJobStatus(jobId, 'loading', 80 + attempts / maxAttempts * 15);
-          this.addLog(jobId, 'info', `BigQuery job still running... (${attempts}/${maxAttempts})`);
-        }
-      }
-
-      if (!bqJobComplete) {
-        throw new Error('BigQuery job timed out. Check the BigQuery console for job status.');
-      }
-
-      // Step 7: Verify data
-      this.updateJobStatus(jobId, 'loading', 95);
-      this.addLog(jobId, 'info', 'Verifying loaded data...');
-
+      this.log('INFO', jobId, 'Loading data to BigQuery...');
       try {
-        const sampleData = await bigQueryService.queryTable({
-          projectId: config.gcpProjectId,
+        const config = configService.getConfig();
+        const bigQueryConfig = {
+          projectId: config.gcpProjectId || 'gcve-demo-408018',
           datasetId,
           tableId
-        }, 5);
+        };
 
-        this.addLog(jobId, 'info', `Verification successful. Found ${sampleData.length} sample records.`);
-      } catch (error) {
-        this.addLog(jobId, 'warn', 'Could not verify data, but load appears successful');
+        console.log('🎯 Loading data with schema configuration:', {
+          hasSchema: schema && schema.length > 0,
+          schemaFields: schema?.length || 0,
+          willAutoDetect: !schema || schema.length === 0
+        });
+
+        const loadJobId = await bigqueryService.loadDataFromGCS(
+          bigQueryConfig,
+          processedFileUrl,
+          schema && schema.length > 0 ? schema : undefined
+        );
+        this.log('INFO', jobId, `BigQuery load job started: ${loadJobId}`);
+
+        // Step 6: Monitor BigQuery job
+        this.updateJobStatus(jobId, 'loading', 90);
+        await this.monitorBigQueryJob(jobId, loadJobId);
+
+        // Update job with final details
+        const job = this.jobs.get(jobId);
+        if (job) {
+          job.bigQueryJobId = loadJobId;
+          job.recordCount = recordCount;
+          job.processedFileUrl = processedFileUrl;
+        }
+
+        this.updateJobStatus(jobId, 'completed', 100);
+        this.log('INFO', jobId, 'Job completed successfully');
+
+      } catch (loadError) {
+        throw new Error(`BigQuery load failed: ${loadError.message}`);
       }
-
-      // Complete
-      this.updateJobStatus(jobId, 'completed', 100);
-      this.addLog(jobId, 'info', '🎉 Job completed successfully!');
-      this.addLog(jobId, 'info', `Your data is now available in BigQuery at: ${config.gcpProjectId}.${config.targetTable}`);
 
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.updateJobStatus(jobId, 'failed', 0);
-      this.addLog(jobId, 'error', `Job failed: ${errorMessage}`);
-
-      if (job) {
-        job.errorMessage = errorMessage;
-      }
-
-      // Add specific troubleshooting tips based on error type
-      this.addLog(jobId, 'info', '🔧 Troubleshooting tips:');
-
-      if (errorMessage.includes('Service account')) {
-        this.addLog(jobId, 'info', '• Verify your service account key is correctly formatted');
-        this.addLog(jobId, 'info', '• Ensure the service account has BigQuery Data Editor and Storage Object Admin roles');
-        this.addLog(jobId, 'info', '• Check that the service account key has not been revoked');
-      } else if (errorMessage.includes('BigQuery')) {
-        this.addLog(jobId, 'info', '• Verify your GCP project ID is correct');
-        this.addLog(jobId, 'info', '• Ensure BigQuery API is enabled');
-        this.addLog(jobId, 'info', '• Check BigQuery Data Editor permissions');
-        this.addLog(jobId, 'info', '• Verify the dataset exists in your project');
-      } else if (errorMessage.includes('upload') || errorMessage.includes('GCS')) {
-        this.addLog(jobId, 'info', '• Check your service account configuration');
-        this.addLog(jobId, 'info', '• Verify Storage Object Admin permissions');
-        this.addLog(jobId, 'info', '• Ensure file is a valid shapefile');
-      } else {
-        this.addLog(jobId, 'info', '• Verify your GCP project ID is correct');
-        this.addLog(jobId, 'info', '• Ensure BigQuery and Cloud Storage APIs are enabled');
-        this.addLog(jobId, 'info', '• Check that you have proper permissions');
-        this.addLog(jobId, 'info', '• Verify the dataset exists in your project');
-        this.addLog(jobId, 'info', '• Ensure your shapefile is valid and properly formatted');
-      }
+      this.log('ERROR', jobId, `Job failed: ${error.message}`);
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+      throw error;
     }
   }
 
+  private async processGCSJob(
+  jobId: string,
+  gcsBucket: string,
+  gcsPath: string,
+  schema: any,
+  datasetId: string,
+  tableId: string)
+  : Promise<void> {
+    try {
+      this.log('INFO', jobId, 'Starting GCS job processing...');
+
+      const fullGcsPath = `gs://${gcsBucket}/${gcsPath}`;
+
+      this.updateJobStatus(jobId, 'processing', 20);
+
+      // Step 1: Create dataset and table (only if we have a custom schema)
+      if (schema && schema.length > 0) {
+        this.log('INFO', jobId, 'Creating BigQuery dataset and table with custom schema...');
+        try {
+          const config = configService.getConfig();
+          const bigQueryConfig = {
+            projectId: config.gcpProjectId || 'gcve-demo-408018',
+            datasetId,
+            tableId
+          };
+
+          await bigqueryService.createTable(bigQueryConfig, schema);
+          this.log('INFO', jobId, 'Table created successfully with custom schema');
+        } catch (tableError) {
+          // Continue if table already exists
+          if (tableError.message?.includes('409') || tableError.message?.includes('already exists')) {
+            this.log('INFO', jobId, 'Table already exists, continuing...');
+          } else {
+            throw new Error(`Table creation failed: ${tableError.message}`);
+          }
+        }
+      } else {
+        this.log('INFO', jobId, 'Skipping table creation - will use BigQuery auto-detect schema');
+      }
+
+      this.updateJobStatus(jobId, 'loading', 50);
+
+      // Step 2: Load data directly from GCS to BigQuery
+      this.log('INFO', jobId, 'Loading data from GCS to BigQuery...');
+      try {
+        const config = configService.getConfig();
+        const bigQueryConfig = {
+          projectId: config.gcpProjectId || 'gcve-demo-408018',
+          datasetId,
+          tableId
+        };
+
+        const loadJobId = await bigqueryService.loadDataFromGCS(
+          bigQueryConfig,
+          fullGcsPath,
+          schema && schema.length > 0 ? schema : undefined
+        );
+        this.log('INFO', jobId, `BigQuery load job started: ${loadJobId}`);
+
+        // Step 3: Monitor BigQuery job
+        this.updateJobStatus(jobId, 'loading', 80);
+        await this.monitorBigQueryJob(jobId, loadJobId);
+
+        // Update job with final details
+        const job = this.jobs.get(jobId);
+        if (job) {
+          job.bigQueryJobId = loadJobId;
+          job.processedFileUrl = fullGcsPath;
+        }
+
+        this.updateJobStatus(jobId, 'completed', 100);
+        this.log('INFO', jobId, 'GCS job completed successfully');
+
+      } catch (loadError) {
+        throw new Error(`BigQuery load failed: ${loadError.message}`);
+      }
+
+    } catch (error) {
+      this.log('ERROR', jobId, `GCS job failed: ${error.message}`);
+      this.updateJobStatus(jobId, 'failed', 0, error.message);
+      throw error;
+    }
+  }
+
+  private async monitorBigQueryJob(jobId: string, bigQueryJobId: string): Promise<void> {
+    const maxAttempts = 15;
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      try {
+        const jobStatus = await bigqueryService.getJobStatus(bigQueryJobId);
+
+        if (jobStatus.status === 'DONE') {
+          if (jobStatus.errors && jobStatus.errors.length > 0) {
+            const errorMessage = jobStatus.errors.map((e) => e.message).join(', ');
+            throw new Error(`BigQuery job failed: ${errorMessage}`);
+          }
+          this.log('INFO', jobId, 'BigQuery job completed successfully');
+          return;
+        }
+
+        this.log('INFO', jobId, `BigQuery job status: ${jobStatus.status} (attempt ${attempts})`);
+
+        // Wait before next check
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      } catch (error) {
+        this.log('WARN', jobId, `Failed to check job status (attempt ${attempts}): ${error.message}`);
+
+        if (attempts >= maxAttempts) {
+          throw error;
+        }
+
+        // Wait before retry
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
+
+    throw new Error('BigQuery job monitoring timeout');
+  }
+
+  // Convert ProcessingJob to Job interface
+  private convertToJob(processingJob: ProcessingJob): Job {
+    return {
+      id: processingJob.id,
+      userId: 'system', // Add default userId
+      fileName: processingJob.fileName,
+      status: processingJob.status,
+      progress: processingJob.progress,
+      createdAt: processingJob.createdAt,
+      updatedAt: processingJob.lastUpdated,
+      error: processingJob.error,
+      result: processingJob.recordCount ? {
+        recordCount: processingJob.recordCount,
+        processedFileUrl: processingJob.processedFileUrl,
+        bigQueryJobId: processingJob.bigQueryJobId
+      } : undefined
+    };
+  }
+
+  // Interface methods to match mockJobService
   async getJobs(userId: string): Promise<Job[]> {
     return Array.from(this.jobs.values()).
-    filter((job) => job.userId === userId).
-    sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+    map((job) => this.convertToJob(job)).
+    sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async getJob(jobId: string): Promise<Job | null> {
-    return this.jobs.get(jobId) || null;
+    const processingJob = this.jobs.get(jobId);
+    return processingJob ? this.convertToJob(processingJob) : null;
   }
 
   subscribeToJobUpdates(jobId: string, callback: (job: Job) => void): () => void {
-    const interval = setInterval(() => {
-      const job = this.jobs.get(jobId);
-      if (job) {
-        callback(job);
+    const updateCallback = () => {
+      const processingJob = this.jobs.get(jobId);
+      if (processingJob) {
+        callback(this.convertToJob(processingJob));
       }
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
+    this.addJobUpdateCallback(updateCallback);
+
+    return () => {
+      this.removeJobUpdateCallback(updateCallback);
+    };
+  }
+
+  // Legacy methods for backward compatibility
+  async getJobLegacy(jobId: string): Promise<ProcessingJob | undefined> {
+    return this.jobs.get(jobId);
+  }
+
+  async getAllJobs(): Promise<ProcessingJob[]> {
+    return Array.from(this.jobs.values()).sort((a, b) =>
+    b.createdAt.getTime() - a.createdAt.getTime()
+    );
+  }
+
+  async deleteJob(jobId: string): Promise<void> {
+    if (this.jobs.delete(jobId)) {
+      this.log('INFO', jobId, 'Job deleted');
+      this.notifyJobUpdate();
+    }
+  }
+
+  async retryJob(jobId: string): Promise<void> {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      throw new Error('Job not found');
+    }
+
+    if (job.status === 'pending' || job.status === 'uploading' || job.status === 'processing' || job.status === 'loading') {
+      throw new Error('Job is already in progress');
+    }
+
+    this.log('INFO', jobId, 'Retrying job...');
+    job.status = 'pending';
+    job.progress = 0;
+    job.error = undefined;
+    job.lastUpdated = new Date();
+    this.notifyJobUpdate();
+
+    // Create a new file object (this is a limitation - in real app, we'd store the file)
+    // For now, we'll just update the status to show retry attempt
+    this.updateJobStatus(jobId, 'failed', 0, 'Retry not supported - original file not available. Please upload the file again.');
+  }
+
+  // Get job statistics
+  async getJobStats(): Promise<{
+    total: number;
+    completed: number;
+    failed: number;
+    inProgress: number;
+  }> {
+    const jobs = Array.from(this.jobs.values());
+
+    return {
+      total: jobs.length,
+      completed: jobs.filter((j) => j.status === 'completed').length,
+      failed: jobs.filter((j) => j.status === 'failed').length,
+      inProgress: jobs.filter((j) =>
+      j.status === 'pending' ||
+      j.status === 'uploading' ||
+      j.status === 'processing' ||
+      j.status === 'loading'
+      ).length
+    };
   }
 }
 

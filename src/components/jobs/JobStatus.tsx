@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +20,8 @@ import {
   Eye,
   AlertTriangle,
   ExternalLink,
-  Zap } from
+  Zap,
+  Copy } from
 'lucide-react';
 import { format } from 'date-fns';
 
@@ -30,7 +30,7 @@ interface JobStatusProps {
   onJobsUpdate: (jobs: Job[]) => void;
 }
 
-const JobStatus: React.FC<JobStatusProps> = ({ jobs, onJobsUpdate }) => {
+const JobStatus: React.FC<JobStatusProps> = ({ jobs = [], onJobsUpdate }) => {
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
   const [isRealProcessingEnabled, setIsRealProcessingEnabled] = useState(false);
 
@@ -52,14 +52,17 @@ const JobStatus: React.FC<JobStatusProps> = ({ jobs, onJobsUpdate }) => {
   useEffect(() => {
     const unsubscribeFunctions: (() => void)[] = [];
 
-    jobs.forEach((job) => {
-      if (job.status !== 'completed' && job.status !== 'failed') {
-        const unsubscribe = jobService.subscribeToJobUpdates(job.id, (updatedJob) => {
-          onJobsUpdate(jobs.map((j) => j.id === updatedJob.id ? updatedJob : j));
-        });
-        unsubscribeFunctions.push(unsubscribe);
-      }
-    });
+    // Ensure jobs is an array before iterating
+    if (Array.isArray(jobs)) {
+      jobs.forEach((job) => {
+        if (job.status !== 'completed' && job.status !== 'failed') {
+          const unsubscribe = jobService.subscribeToJobUpdates(job.id, (updatedJob) => {
+            onJobsUpdate(jobs.map((j) => j.id === updatedJob.id ? updatedJob : j));
+          });
+          unsubscribeFunctions.push(unsubscribe);
+        }
+      });
+    }
 
     return () => {
       unsubscribeFunctions.forEach((unsubscribe) => unsubscribe());
@@ -69,17 +72,17 @@ const JobStatus: React.FC<JobStatusProps> = ({ jobs, onJobsUpdate }) => {
   const getStatusIcon = (status: Job['status']) => {
     switch (status) {
       case 'queued':
-        return <Clock className="h-4 w-4" data-id="p8w7st0yt" data-path="src/components/jobs/JobStatus.tsx" />;
+        return <Clock className="h-4 w-4" data-id="bir47b764" data-path="src/components/jobs/JobStatus.tsx" />;
       case 'converting':
       case 'reading':
       case 'loading':
-        return <Loader2 className="h-4 w-4 animate-spin" data-id="wngau3wj6" data-path="src/components/jobs/JobStatus.tsx" />;
+        return <Loader2 className="h-4 w-4 animate-spin" data-id="sen7de2je" data-path="src/components/jobs/JobStatus.tsx" />;
       case 'completed':
-        return <CheckCircle className="h-4 w-4" data-id="pd5qs13ie" data-path="src/components/jobs/JobStatus.tsx" />;
+        return <CheckCircle className="h-4 w-4" data-id="jw14nsqfj" data-path="src/components/jobs/JobStatus.tsx" />;
       case 'failed':
-        return <XCircle className="h-4 w-4" data-id="izojxfrny" data-path="src/components/jobs/JobStatus.tsx" />;
+        return <XCircle className="h-4 w-4" data-id="y3p23m1re" data-path="src/components/jobs/JobStatus.tsx" />;
       default:
-        return <AlertCircle className="h-4 w-4" data-id="vbycy5hkr" data-path="src/components/jobs/JobStatus.tsx" />;
+        return <AlertCircle className="h-4 w-4" data-id="9wsuzprzs" data-path="src/components/jobs/JobStatus.tsx" />;
     }
   };
 
@@ -126,170 +129,195 @@ const JobStatus: React.FC<JobStatusProps> = ({ jobs, onJobsUpdate }) => {
     return `Processing: ${job.status}...`;
   };
 
-  if (jobs.length === 0) {
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  // Ensure jobs is an array and handle the case when it's undefined or null
+  const safeJobs = Array.isArray(jobs) ? jobs : [];
+
+  if (safeJobs.length === 0) {
     return (
-      <Card data-id="vl8fvf2tl" data-path="src/components/jobs/JobStatus.tsx">
-        <CardContent className="p-6 text-center" data-id="0n8gt59mf" data-path="src/components/jobs/JobStatus.tsx">
-          <div className="text-gray-400 mb-2" data-id="p24hbtbm8" data-path="src/components/jobs/JobStatus.tsx">
-            <Database className="h-12 w-12 mx-auto" data-id="2jv5t757g" data-path="src/components/jobs/JobStatus.tsx" />
+      <Card data-id="f30lbfagq" data-path="src/components/jobs/JobStatus.tsx">
+        <CardContent className="p-6 text-center" data-id="vn542q9g4" data-path="src/components/jobs/JobStatus.tsx">
+          <div className="text-gray-400 mb-2" data-id="vd6z8ot2y" data-path="src/components/jobs/JobStatus.tsx">
+            <Database className="h-12 w-12 mx-auto" data-id="v3ecfmeoo" data-path="src/components/jobs/JobStatus.tsx" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1" data-id="iodjnrnwe" data-path="src/components/jobs/JobStatus.tsx">No jobs yet</h3>
-          <p className="text-gray-500" data-id="yr0xxqc63" data-path="src/components/jobs/JobStatus.tsx">Your processing jobs will appear here</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-1" data-id="giecqqp7p" data-path="src/components/jobs/JobStatus.tsx">No jobs yet</h3>
+          <p className="text-gray-500" data-id="inrwl5rqu" data-path="src/components/jobs/JobStatus.tsx">Your processing jobs will appear here</p>
         </CardContent>
       </Card>);
 
   }
 
   return (
-    <div className="space-y-4" data-id="ps6hwn7v9" data-path="src/components/jobs/JobStatus.tsx">
-      <div className="flex items-center justify-between" data-id="60eu818i6" data-path="src/components/jobs/JobStatus.tsx">
-        <h2 className="text-lg font-semibold" data-id="lrwkv0xzl" data-path="src/components/jobs/JobStatus.tsx">Processing Jobs</h2>
-        <div className="flex items-center gap-2" data-id="nytvudcjv" data-path="src/components/jobs/JobStatus.tsx">
-          <Badge variant="outline" data-id="xrr593gdd" data-path="src/components/jobs/JobStatus.tsx">{jobs.length} total</Badge>
+    <div className="space-y-4" data-id="dstqjg9aw" data-path="src/components/jobs/JobStatus.tsx">
+      <div className="flex items-center justify-between" data-id="1qskrra5s" data-path="src/components/jobs/JobStatus.tsx">
+        <h2 className="text-lg font-semibold" data-id="5nevl8kyd" data-path="src/components/jobs/JobStatus.tsx">Processing Jobs</h2>
+        <div className="flex items-center gap-2" data-id="u043f5z3z" data-path="src/components/jobs/JobStatus.tsx">
+          <Badge variant="outline" data-id="l5vgjb1i9" data-path="src/components/jobs/JobStatus.tsx">{safeJobs.length} total</Badge>
           {isRealProcessingEnabled ?
-          <Badge className="bg-green-100 text-green-800" data-id="7mz6854j3" data-path="src/components/jobs/JobStatus.tsx">
-              <Zap className="h-3 w-3 mr-1" data-id="wj0342zig" data-path="src/components/jobs/JobStatus.tsx" />
+          <Badge className="bg-green-100 text-green-800" data-id="hod5n4ia2" data-path="src/components/jobs/JobStatus.tsx">
+              <Zap className="h-3 w-3 mr-1" data-id="bop2ad8m7" data-path="src/components/jobs/JobStatus.tsx" />
               Production Mode
             </Badge> :
-          <Badge variant="secondary" data-id="cnaf7spvr" data-path="src/components/jobs/JobStatus.tsx">Demo Mode</Badge>
+          <Badge variant="secondary" data-id="clrtsagjd" data-path="src/components/jobs/JobStatus.tsx">Demo Mode</Badge>
           }
         </div>
       </div>
 
       {/* Mode Alert - only show if in demo mode */}
       {!isRealProcessingEnabled &&
-      <Alert data-id="397nnylg3" data-path="src/components/jobs/JobStatus.tsx">
-          <AlertTriangle className="h-4 w-4" data-id="p4ztur0gb" data-path="src/components/jobs/JobStatus.tsx" />
-          <AlertDescription data-id="plsumzzzl" data-path="src/components/jobs/JobStatus.tsx">
-            <strong data-id="mx214z65m" data-path="src/components/jobs/JobStatus.tsx">Demo Mode Active:</strong> Jobs show as "completed" but no actual data is loaded to BigQuery. 
+      <Alert data-id="5xryibctd" data-path="src/components/jobs/JobStatus.tsx">
+          <AlertTriangle className="h-4 w-4" data-id="6h6q4n374" data-path="src/components/jobs/JobStatus.tsx" />
+          <AlertDescription data-id="y9o7hjozz" data-path="src/components/jobs/JobStatus.tsx">
+            <strong data-id="2qqv3n9ha" data-path="src/components/jobs/JobStatus.tsx">Demo Mode Active:</strong> Jobs show as "completed" but no actual data is loaded to BigQuery. 
             To enable real processing, configure your production settings and test connections in the Diagnostics tab.
           </AlertDescription>
         </Alert>
       }
 
       {/* Production Mode Success Alert */}
-      {isRealProcessingEnabled && jobs.some((job) => job.status === 'completed') &&
-      <Alert className="border-green-200 bg-green-50" data-id="kyckyeg50" data-path="src/components/jobs/JobStatus.tsx">
-          <CheckCircle className="h-4 w-4 text-green-600" data-id="o8wph5vpo" data-path="src/components/jobs/JobStatus.tsx" />
-          <AlertDescription data-id="ee1c3qq6t" data-path="src/components/jobs/JobStatus.tsx">
-            <strong data-id="ki835luwi" data-path="src/components/jobs/JobStatus.tsx">Production Mode Active:</strong> Your jobs are processing real data and loading to BigQuery. 
+      {isRealProcessingEnabled && safeJobs.some((job) => job.status === 'completed') &&
+      <Alert className="border-green-200 bg-green-50" data-id="ll6vxr8yo" data-path="src/components/jobs/JobStatus.tsx">
+          <CheckCircle className="h-4 w-4 text-green-600" data-id="es5r1tee1" data-path="src/components/jobs/JobStatus.tsx" />
+          <AlertDescription data-id="qg4jeqr63" data-path="src/components/jobs/JobStatus.tsx">
+            <strong data-id="jw4z2gxdv" data-path="src/components/jobs/JobStatus.tsx">Production Mode Active:</strong> Your jobs are processing real data and loading to BigQuery. 
             Check the BigQuery console to view your data.
           </AlertDescription>
         </Alert>
       }
 
-      <div className="space-y-3" data-id="a02mv7xdt" data-path="src/components/jobs/JobStatus.tsx">
-        {jobs.map((job) =>
-        <Card key={job.id} className="transition-all duration-200 hover:shadow-md" data-id="atqrf3fuz" data-path="src/components/jobs/JobStatus.tsx">
-            <CardContent className="p-4" data-id="adb6bw3uk" data-path="src/components/jobs/JobStatus.tsx">
-              <div className="flex items-center justify-between mb-3" data-id="z11fw85qa" data-path="src/components/jobs/JobStatus.tsx">
-                <div className="flex items-center space-x-3" data-id="kyesrugwj" data-path="src/components/jobs/JobStatus.tsx">
-                  <div className={`p-1 rounded-full ${getStatusColor(job.status)}`} data-id="o9rpd3zyt" data-path="src/components/jobs/JobStatus.tsx">
+      <div className="space-y-3" data-id="nkimf41qg" data-path="src/components/jobs/JobStatus.tsx">
+        {safeJobs.map((job) =>
+        <Card key={job.id} className="transition-all duration-200 hover:shadow-md" data-id="k1a0uawhy" data-path="src/components/jobs/JobStatus.tsx">
+            <CardContent className="p-4" data-id="4tstnpfnb" data-path="src/components/jobs/JobStatus.tsx">
+              <div className="flex items-center justify-between mb-3" data-id="bun0tpfvj" data-path="src/components/jobs/JobStatus.tsx">
+                <div className="flex items-center space-x-3" data-id="9q56uszsq" data-path="src/components/jobs/JobStatus.tsx">
+                  <div className={`p-1 rounded-full ${getStatusColor(job.status)}`} data-id="92voh22v9" data-path="src/components/jobs/JobStatus.tsx">
                     {getStatusIcon(job.status)}
                   </div>
-                  <div data-id="zxph7cfxj" data-path="src/components/jobs/JobStatus.tsx">
-                    <h3 className="font-medium text-gray-900" data-id="lv2p8vh4u" data-path="src/components/jobs/JobStatus.tsx">
+                  <div data-id="myy2wgrrt" data-path="src/components/jobs/JobStatus.tsx">
+                    <h3 className="font-medium text-gray-900" data-id="ieo9xbua7" data-path="src/components/jobs/JobStatus.tsx">
                       {job.fileName || job.gcsPath || 'Processing Job'}
                     </h3>
-                    <p className="text-sm text-gray-500" data-id="phqz9ihbx" data-path="src/components/jobs/JobStatus.tsx">
+                    <p className="text-sm text-gray-500" data-id="jxq8246os" data-path="src/components/jobs/JobStatus.tsx">
                       Target: {job.targetTable}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2" data-id="1spsfawvw" data-path="src/components/jobs/JobStatus.tsx">
-                  <Badge className={getStatusColor(job.status)} data-id="xh5dgw8wx" data-path="src/components/jobs/JobStatus.tsx">
+                <div className="flex items-center space-x-2" data-id="2eq3sii2e" data-path="src/components/jobs/JobStatus.tsx">
+                  <Badge className={getStatusColor(job.status)} data-id="9jzne7g11" data-path="src/components/jobs/JobStatus.tsx">
                     {job.status.toUpperCase()}
                   </Badge>
                   <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)} data-id="solbegac5" data-path="src/components/jobs/JobStatus.tsx">
-
-                    <Eye className="h-4 w-4" data-id="vklmr7uyv" data-path="src/components/jobs/JobStatus.tsx" />
+                  onClick={() => setExpandedJob(expandedJob === job.id ? null : job.id)} data-id="rpls59kn3" data-path="src/components/jobs/JobStatus.tsx">
+                    <Eye className="h-4 w-4" data-id="pyvlzijlm" data-path="src/components/jobs/JobStatus.tsx" />
                   </Button>
                 </div>
               </div>
 
               {/* Status Message */}
-              <div className="mb-3" data-id="v7aiqo3h8" data-path="src/components/jobs/JobStatus.tsx">
+              <div className="mb-3" data-id="bq06w6gox" data-path="src/components/jobs/JobStatus.tsx">
                 <p className={`text-sm ${
               job.status === 'completed' ? 'text-green-600' :
               job.status === 'failed' ? 'text-red-600' :
               'text-blue-600'}`
-              } data-id="6xh39uv5h" data-path="src/components/jobs/JobStatus.tsx">
+              } data-id="9oa98gcmo" data-path="src/components/jobs/JobStatus.tsx">
                   {getJobStatusMessage(job)}
                 </p>
               </div>
 
               {(job.status === 'converting' || job.status === 'reading' || job.status === 'loading') &&
-            <div className="mb-3" data-id="934gp8h2k" data-path="src/components/jobs/JobStatus.tsx">
-                  <div className="flex justify-between items-center mb-1" data-id="l7i2ev1y1" data-path="src/components/jobs/JobStatus.tsx">
-                    <span className="text-sm text-gray-600" data-id="1cxr3wgmk" data-path="src/components/jobs/JobStatus.tsx">Progress</span>
-                    <span className="text-sm font-medium" data-id="8o81wvuhm" data-path="src/components/jobs/JobStatus.tsx">{job.progress}%</span>
+            <div className="mb-3" data-id="gmj6yw3vz" data-path="src/components/jobs/JobStatus.tsx">
+                  <div className="flex justify-between items-center mb-1" data-id="h6w3wpn9z" data-path="src/components/jobs/JobStatus.tsx">
+                    <span className="text-sm text-gray-600" data-id="823xi33x7" data-path="src/components/jobs/JobStatus.tsx">Progress</span>
+                    <span className="text-sm font-medium" data-id="xjmmk6cst" data-path="src/components/jobs/JobStatus.tsx">{job.progress}%</span>
                   </div>
-                  <Progress value={job.progress} className="h-2" data-id="5e0o7t5v9" data-path="src/components/jobs/JobStatus.tsx" />
+                  <Progress value={job.progress} className="h-2" data-id="dnei8nosf" data-path="src/components/jobs/JobStatus.tsx" />
                 </div>
             }
 
-              <div className="flex items-center justify-between text-sm text-gray-500" data-id="h7vccwxje" data-path="src/components/jobs/JobStatus.tsx">
-                <div className="flex items-center space-x-4" data-id="jehw6hcg6" data-path="src/components/jobs/JobStatus.tsx">
-                  <div className="flex items-center space-x-1" data-id="ldp9z9e8p" data-path="src/components/jobs/JobStatus.tsx">
-                    <Calendar className="h-4 w-4" data-id="odhislv0e" data-path="src/components/jobs/JobStatus.tsx" />
-                    <span data-id="8m54r0o82" data-path="src/components/jobs/JobStatus.tsx">{format(job.startTime, 'MMM d, HH:mm')}</span>
+              <div className="flex items-center justify-between text-sm text-gray-500" data-id="nh46d1rng" data-path="src/components/jobs/JobStatus.tsx">
+                <div className="flex items-center space-x-4" data-id="hp19481nk" data-path="src/components/jobs/JobStatus.tsx">
+                  <div className="flex items-center space-x-1" data-id="7dm4n5yz1" data-path="src/components/jobs/JobStatus.tsx">
+                    <Calendar className="h-4 w-4" data-id="wasi7xgju" data-path="src/components/jobs/JobStatus.tsx" />
+                    <span data-id="q69qttc46" data-path="src/components/jobs/JobStatus.tsx">{format(job.startTime, 'MMM d, HH:mm')}</span>
                   </div>
-                  <div className="flex items-center space-x-1" data-id="ab8ymus4y" data-path="src/components/jobs/JobStatus.tsx">
-                    <Clock className="h-4 w-4" data-id="dc49fp62w" data-path="src/components/jobs/JobStatus.tsx" />
-                    <span data-id="z27jldzvt" data-path="src/components/jobs/JobStatus.tsx">{formatDuration(job.startTime, job.endTime)}</span>
+                  <div className="flex items-center space-x-1" data-id="24li0zi8i" data-path="src/components/jobs/JobStatus.tsx">
+                    <Clock className="h-4 w-4" data-id="kmg3hj74t" data-path="src/components/jobs/JobStatus.tsx" />
+                    <span data-id="h9m90mo4f" data-path="src/components/jobs/JobStatus.tsx">{formatDuration(job.startTime, job.endTime)}</span>
                   </div>
                 </div>
                 {job.errorMessage &&
-              <Badge variant="destructive" className="text-xs" data-id="l9emurfk9" data-path="src/components/jobs/JobStatus.tsx">
+              <Badge variant="destructive" className="text-xs" data-id="7dmqniop2" data-path="src/components/jobs/JobStatus.tsx">
                     Error
                   </Badge>
               }
               </div>
 
               {expandedJob === job.id &&
-            <div className="mt-4 pt-4 border-t border-gray-200" data-id="s2l8qocuu" data-path="src/components/jobs/JobStatus.tsx">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" data-id="71q4jzk31" data-path="src/components/jobs/JobStatus.tsx">
-                    <div data-id="7hzo04wr8" data-path="src/components/jobs/JobStatus.tsx">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2" data-id="ktdupmx69" data-path="src/components/jobs/JobStatus.tsx">Job Details</h4>
-                      <div className="space-y-1 text-sm text-gray-600" data-id="awvgnrdug" data-path="src/components/jobs/JobStatus.tsx">
-                        <p data-id="e00thmpg2" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="ncme2f95i" data-path="src/components/jobs/JobStatus.tsx">ID:</strong> {job.id}</p>
-                        <p data-id="5pz3v561l" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="7qlbkkcco" data-path="src/components/jobs/JobStatus.tsx">Source:</strong> {job.sourceType.toUpperCase()}</p>
-                        <p data-id="c7rh9sf9y" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="rvfj9x55r" data-path="src/components/jobs/JobStatus.tsx">Project:</strong> {job.gcpProjectId}</p>
-                        <p data-id="adpcmgcjl" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="hco2abfm2" data-path="src/components/jobs/JobStatus.tsx">Mode:</strong> {isRealProcessingEnabled ? 'Production' : 'Demo'}</p>
+            <div className="mt-4 pt-4 border-t border-gray-200" data-id="gqpth5r2m" data-path="src/components/jobs/JobStatus.tsx">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" data-id="xoli7ppqy" data-path="src/components/jobs/JobStatus.tsx">
+                    <div data-id="nd7wa6ymm" data-path="src/components/jobs/JobStatus.tsx">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2" data-id="yhnubji0o" data-path="src/components/jobs/JobStatus.tsx">Job Details</h4>
+                      <div className="space-y-1 text-sm text-gray-600" data-id="hiwd1gbel" data-path="src/components/jobs/JobStatus.tsx">
+                        <p data-id="0jjmh6tyt" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="w9lf9930s" data-path="src/components/jobs/JobStatus.tsx">ID:</strong> {job.id}</p>
+                        <p data-id="t6uivwtp4" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="5hfo7fe3o" data-path="src/components/jobs/JobStatus.tsx">Source:</strong> {job.sourceType.toUpperCase()}</p>
+                        <p data-id="ynszkraup" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="w1nukxghs" data-path="src/components/jobs/JobStatus.tsx">Project:</strong> {job.gcpProjectId}</p>
+                        <p data-id="37z6qaao0" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="32vy9h42h" data-path="src/components/jobs/JobStatus.tsx">Mode:</strong> {isRealProcessingEnabled ? 'Production' : 'Demo'}</p>
+                        {job.bigQueryJobId &&
+                    <div className="flex items-center gap-2" data-id="szc3u1j5e" data-path="src/components/jobs/JobStatus.tsx">
+                            <strong data-id="db31e8hs4" data-path="src/components/jobs/JobStatus.tsx">BigQuery Job ID:</strong>
+                            <code className="bg-gray-100 px-1 rounded text-xs" data-id="dbzwl4saw" data-path="src/components/jobs/JobStatus.tsx">{job.bigQueryJobId}</code>
+                            <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => copyToClipboard(job.bigQueryJobId!)}
+                        className="h-6 w-6 p-0" data-id="xua2dr5ow" data-path="src/components/jobs/JobStatus.tsx">
+
+                              <Copy className="h-3 w-3" data-id="3afdni9s1" data-path="src/components/jobs/JobStatus.tsx" />
+                            </Button>
+                          </div>
+                    }
                         {job.integerColumns &&
-                    <p data-id="jp23768g7" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="cf7mn0h7j" data-path="src/components/jobs/JobStatus.tsx">Integer Columns:</strong> {job.integerColumns}</p>
+                    <p data-id="zaab1b32d" data-path="src/components/jobs/JobStatus.tsx"><strong data-id="ufefmcjy7" data-path="src/components/jobs/JobStatus.tsx">Integer Columns:</strong> {job.integerColumns}</p>
                     }
                       </div>
                     </div>
                     {job.errorMessage &&
-                <div data-id="wmam523u1" data-path="src/components/jobs/JobStatus.tsx">
-                        <h4 className="text-sm font-medium text-red-700 mb-2" data-id="xd9pzty9r" data-path="src/components/jobs/JobStatus.tsx">Error Details</h4>
-                        <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800" data-id="fbqu6jtqe" data-path="src/components/jobs/JobStatus.tsx">
+                <div data-id="pba860zdd" data-path="src/components/jobs/JobStatus.tsx">
+                        <h4 className="text-sm font-medium text-red-700 mb-2" data-id="upq6exvkc" data-path="src/components/jobs/JobStatus.tsx">Error Details</h4>
+                        <div className="p-2 bg-red-50 border border-red-200 rounded text-sm text-red-800" data-id="ahsyh52im" data-path="src/components/jobs/JobStatus.tsx">
                           {job.errorMessage}
                         </div>
+                        {job.errorMessage.includes('BigQuery job timed out') && job.bigQueryJobId &&
+                  <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800" data-id="jexgv6ozh" data-path="src/components/jobs/JobStatus.tsx">
+                            <p className="font-medium" data-id="da152r6rn" data-path="src/components/jobs/JobStatus.tsx">💡 Tip:</p>
+                            <p data-id="ajxia32sf" data-path="src/components/jobs/JobStatus.tsx">Use the "Job Checker" tab to manually verify if job {job.bigQueryJobId} completed successfully.</p>
+                          </div>
+                  }
                       </div>
                 }
                   </div>
 
                   {/* BigQuery Link for completed jobs */}
                   {job.status === 'completed' && isRealProcessingEnabled &&
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded" data-id="judk18lg8" data-path="src/components/jobs/JobStatus.tsx">
-                      <div className="flex items-center justify-between" data-id="7r1wwdwwz" data-path="src/components/jobs/JobStatus.tsx">
-                        <div data-id="9n8nphc6u" data-path="src/components/jobs/JobStatus.tsx">
-                          <p className="text-sm font-medium text-green-800" data-id="9gzc9dxko" data-path="src/components/jobs/JobStatus.tsx">Data Available in BigQuery</p>
-                          <p className="text-xs text-green-700" data-id="27wj04lxg" data-path="src/components/jobs/JobStatus.tsx">
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded" data-id="4zrl7ndoq" data-path="src/components/jobs/JobStatus.tsx">
+                      <div className="flex items-center justify-between" data-id="k9u8tlpnr" data-path="src/components/jobs/JobStatus.tsx">
+                        <div data-id="qrzjwcsoe" data-path="src/components/jobs/JobStatus.tsx">
+                          <p className="text-sm font-medium text-green-800" data-id="xxsob4fmo" data-path="src/components/jobs/JobStatus.tsx">Data Available in BigQuery</p>
+                          <p className="text-xs text-green-700" data-id="slqvpoiss" data-path="src/components/jobs/JobStatus.tsx">
                             Your data is now available in: {job.gcpProjectId}.{job.targetTable}
                           </p>
                         </div>
                         <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://console.cloud.google.com/bigquery?project=${job.gcpProjectId}`, '_blank')} data-id="8jca4xfuu" data-path="src/components/jobs/JobStatus.tsx">
-
-                          <ExternalLink className="h-4 w-4 mr-1" data-id="4l4rslnja" data-path="src/components/jobs/JobStatus.tsx" />
+                    onClick={() => window.open(`https://console.cloud.google.com/bigquery?project=${job.gcpProjectId}`, '_blank')} data-id="qzqtj57su" data-path="src/components/jobs/JobStatus.tsx">
+                          <ExternalLink className="h-4 w-4 mr-1" data-id="2m7yel5gd" data-path="src/components/jobs/JobStatus.tsx" />
                           Open BigQuery
                         </Button>
                       </div>
@@ -298,47 +326,53 @@ const JobStatus: React.FC<JobStatusProps> = ({ jobs, onJobsUpdate }) => {
 
                   {/* Demo Mode Notice for completed jobs */}
                   {job.status === 'completed' && !isRealProcessingEnabled &&
-              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded" data-id="elb1jw64r" data-path="src/components/jobs/JobStatus.tsx">
-                      <div className="flex items-center justify-between" data-id="8irkayzyw" data-path="src/components/jobs/JobStatus.tsx">
-                        <div data-id="x68wsxh63" data-path="src/components/jobs/JobStatus.tsx">
-                          <p className="text-sm font-medium text-yellow-800" data-id="eo81gv2r3" data-path="src/components/jobs/JobStatus.tsx">Demo Mode</p>
-                          <p className="text-xs text-yellow-700" data-id="c0ja7tsq8" data-path="src/components/jobs/JobStatus.tsx">
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded" data-id="hx7gvrdey" data-path="src/components/jobs/JobStatus.tsx">
+                      <div className="flex items-center justify-between" data-id="2pftbu7fx" data-path="src/components/jobs/JobStatus.tsx">
+                        <div data-id="q2e2fst48" data-path="src/components/jobs/JobStatus.tsx">
+                          <p className="text-sm font-medium text-yellow-800" data-id="flgc8vmrj" data-path="src/components/jobs/JobStatus.tsx">Demo Mode</p>
+                          <p className="text-xs text-yellow-700" data-id="qtclrf9o9" data-path="src/components/jobs/JobStatus.tsx">
                             In production mode, your data would be available at: {job.gcpProjectId}.{job.targetTable}
                           </p>
                         </div>
                         <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(`https://console.cloud.google.com/bigquery?project=${job.gcpProjectId}`, '_blank')} data-id="j0x4b971x" data-path="src/components/jobs/JobStatus.tsx">
-
-                          <ExternalLink className="h-4 w-4 mr-1" data-id="96r8si4n9" data-path="src/components/jobs/JobStatus.tsx" />
+                    onClick={() => window.open(`https://console.cloud.google.com/bigquery?project=${job.gcpProjectId}`, '_blank')} data-id="qacysz4m1" data-path="src/components/jobs/JobStatus.tsx">
+                          <ExternalLink className="h-4 w-4 mr-1" data-id="9iboub4gg" data-path="src/components/jobs/JobStatus.tsx" />
                           Open BigQuery
                         </Button>
                       </div>
                     </div>
               }
 
-                  <div data-id="z81mduhrc" data-path="src/components/jobs/JobStatus.tsx">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center" data-id="tupy8j6w5" data-path="src/components/jobs/JobStatus.tsx">
-                      <FileText className="h-4 w-4 mr-1" data-id="1k4ta4i6i" data-path="src/components/jobs/JobStatus.tsx" />
+                  <div data-id="2eitnk953" data-path="src/components/jobs/JobStatus.tsx">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center" data-id="164hg1l1k" data-path="src/components/jobs/JobStatus.tsx">
+                      <FileText className="h-4 w-4 mr-1" data-id="xpy5utrby" data-path="src/components/jobs/JobStatus.tsx" />
                       Processing Logs
                     </h4>
-                    <ScrollArea className="h-32 border rounded p-2 bg-gray-50" data-id="p1casvk6q" data-path="src/components/jobs/JobStatus.tsx">
-                      <div className="space-y-1" data-id="p9a04imzy" data-path="src/components/jobs/JobStatus.tsx">
-                        {job.logs.map((log, index) =>
-                    <div key={index} className="text-xs" data-id="kv9d1zpgn" data-path="src/components/jobs/JobStatus.tsx">
-                            <span className="text-gray-500" data-id="gdmucmlp4" data-path="src/components/jobs/JobStatus.tsx">
+                    <ScrollArea className="h-32 border rounded p-2 bg-gray-50" data-id="jpca5byrf" data-path="src/components/jobs/JobStatus.tsx">
+                      <div className="space-y-1" data-id="6c63zewsp" data-path="src/components/jobs/JobStatus.tsx">
+                        {/* Safe array access with fallback to empty array */}
+                        {(job.logs || []).map((log, index) =>
+                    <div key={index} className="text-xs" data-id="0d61z51xn" data-path="src/components/jobs/JobStatus.tsx">
+                            <span className="text-gray-500" data-id="44a4dwtoy" data-path="src/components/jobs/JobStatus.tsx">
                               {format(log.timestamp, 'HH:mm:ss')}
                             </span>
                             <span className={`ml-2 font-mono ${
                       log.level === 'error' ? 'text-red-600' :
                       log.level === 'warn' ? 'text-yellow-600' :
                       'text-gray-700'}`
-                      } data-id="6oc39n0y5" data-path="src/components/jobs/JobStatus.tsx">
+                      } data-id="a00wbt64d" data-path="src/components/jobs/JobStatus.tsx">
                               [{log.level.toUpperCase()}] {log.message}
                             </span>
                           </div>
                     )}
+                        {/* Show message if no logs */}
+                        {(!job.logs || job.logs.length === 0) &&
+                    <div className="text-xs text-gray-500 italic" data-id="4zb8776lc" data-path="src/components/jobs/JobStatus.tsx">
+                          No logs available
+                        </div>
+                    }
                       </div>
                     </ScrollArea>
                   </div>

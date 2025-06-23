@@ -4,403 +4,316 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { configService } from '@/services/configService';
-import { bigQueryService } from '@/services/bigqueryService';
+import { bigqueryService } from '@/services/bigqueryService';
 import { gcsService } from '@/services/gcsService';
-import { CheckCircle, XCircle, Clock, AlertCircle, Zap } from 'lucide-react';
-import ApiDiagnostics from './ApiDiagnostics';
-
-interface ConnectionStatus {
-  status: 'idle' | 'testing' | 'success' | 'error';
-  message?: string;
-  details?: string;
-}
+import { authService } from '@/services/authService';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  RefreshCw,
+  Database,
+  Cloud,
+  Key,
+  HelpCircle,
+  User,
+  Settings } from
+'lucide-react';
+import OAuthManager from '@/components/auth/OAuthManager';
+import GCSPermissionGuide from '@/components/troubleshooting/GCSPermissionGuide';
 
 interface TestResult {
-  bigquery: ConnectionStatus;
-  gcs: ConnectionStatus;
-  overall: ConnectionStatus;
+  name: string;
+  status: 'running' | 'success' | 'error';
+  message?: string;
+  details?: any;
 }
 
 const ConnectionTest: React.FC = () => {
-  const [testResult, setTestResult] = useState<TestResult>({
-    bigquery: { status: 'idle' },
-    gcs: { status: 'idle' },
-    overall: { status: 'idle' }
-  });
-  const [isTestingAll, setIsTestingAll] = useState(false);
   const { toast } = useToast();
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [isRunning, setIsRunning] = useState(false);
+  const [showGCSGuide, setShowGCSGuide] = useState(false);
+  const [gcsError, setGcsError] = useState<string>('');
 
-  const getStatusIcon = (status: ConnectionStatus['status']) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" data-id="5agi250xj" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" data-id="bpzh3ysv8" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
-      case 'testing':
-        return <Clock className="h-4 w-4 text-blue-500 animate-spin" data-id="wae0t9id0" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-400" data-id="04wdi4xvg" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
-    }
-  };
-
-  const getStatusBadge = (status: ConnectionStatus['status']) => {
-    switch (status) {
-      case 'success':
-        return <Badge variant="default" className="bg-green-100 text-green-800" data-id="3ri3o1tbu" data-path="src/components/diagnostics/ConnectionTest.tsx">Connected</Badge>;
-      case 'error':
-        return <Badge variant="destructive" data-id="ablz9bdj9" data-path="src/components/diagnostics/ConnectionTest.tsx">Failed</Badge>;
-      case 'testing':
-        return <Badge variant="secondary" data-id="b1mb8gfqx" data-path="src/components/diagnostics/ConnectionTest.tsx">Testing...</Badge>;
-      default:
-        return <Badge variant="outline" data-id="ig42nn71u" data-path="src/components/diagnostics/ConnectionTest.tsx">Not Tested</Badge>;
-    }
-  };
-
-  const testBigQueryConnection = async () => {
-    const config = configService.getConfig();
-    const projectId = config.gcpProjectId || configService.getGcpProjectFromServiceAccount();
-
-    if (!projectId) {
-      setTestResult((prev) => ({
-        ...prev,
-        bigquery: {
-          status: 'error',
-          message: 'No GCP Project ID configured',
-          details: 'Please set your GCP Project ID in the configuration'
-        }
-      }));
-      return false;
-    }
-
-    setTestResult((prev) => ({ ...prev, bigquery: { status: 'testing' } }));
-
-    try {
-      const isConnected = await bigQueryService.testConnection(projectId);
-
-      if (isConnected) {
-        setTestResult((prev) => ({
-          ...prev,
-          bigquery: {
-            status: 'success',
-            message: `Successfully connected to BigQuery project: ${projectId}`,
-            details: 'BigQuery API is accessible and authentication is working'
-          }
-        }));
-        return true;
-      } else {
-        setTestResult((prev) => ({
-          ...prev,
-          bigquery: {
-            status: 'error',
-            message: 'BigQuery connection failed',
-            details: 'Check your service account permissions and project ID'
-          }
-        }));
-        return false;
+  const tests = [
+  {
+    name: 'Authentication',
+    description: 'Google OAuth authentication status',
+    icon: Key,
+    test: async () => {
+      const isAuth = authService.isAuthenticated();
+      if (!isAuth) {
+        throw new Error('Not authenticated. Please sign in with Google OAuth.');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setTestResult((prev) => ({
-        ...prev,
-        bigquery: {
-          status: 'error',
-          message: 'BigQuery connection failed',
-          details: errorMessage
-        }
-      }));
-      return false;
+
+      const testResult = await authService.testAuthentication();
+      if (!testResult.success) {
+        throw new Error(testResult.error || 'Authentication test failed');
+      }
+
+      return 'Google OAuth authentication successful';
     }
-  };
-
-  const testGCSConnection = async () => {
-    setTestResult((prev) => ({ ...prev, gcs: { status: 'testing' } }));
-
-    try {
+  },
+  {
+    name: 'BigQuery Connection',
+    description: 'Test connection to Google BigQuery',
+    icon: Database,
+    test: async () => {
+      const result = await bigqueryService.testConnection();
+      if (!result.success) {
+        throw new Error(result.error || 'BigQuery connection failed');
+      }
+      return `BigQuery connection successful (Project: ${result.projectId})`;
+    }
+  },
+  {
+    name: 'GCS Connection',
+    description: 'Test connection to Google Cloud Storage',
+    icon: Cloud,
+    test: async () => {
       const result = await gcsService.testConnection();
-
-      if (result.success) {
-        setTestResult((prev) => ({
-          ...prev,
-          gcs: {
-            status: 'success',
-            message: `GCS connection successful using ${result.method}`,
-            details: result.bucket ? `Default bucket: ${result.bucket}` : 'Connection established'
-          }
-        }));
-        return true;
-      } else {
-        setTestResult((prev) => ({
-          ...prev,
-          gcs: {
-            status: 'error',
-            message: 'GCS connection failed',
-            details: result.error || 'Unknown error'
-          }
-        }));
-        return false;
+      if (!result.success) {
+        // Store the error for the troubleshooting guide
+        setGcsError(result.error || 'GCS connection failed');
+        throw new Error(result.error || 'GCS connection failed');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setTestResult((prev) => ({
-        ...prev,
-        gcs: {
-          status: 'error',
-          message: 'GCS connection failed',
-          details: errorMessage
-        }
-      }));
-      return false;
+      return `GCS connection successful (Bucket: ${result.bucket})`;
     }
-  };
+  }];
 
-  const testAllConnections = async () => {
-    setIsTestingAll(true);
-    setTestResult((prev) => ({ ...prev, overall: { status: 'testing' } }));
 
-    try {
-      console.log('🔍 Starting comprehensive connection test...');
+  const runTests = async () => {
+    setIsRunning(true);
+    setTestResults([]);
+    setGcsError('');
 
-      // Test both connections
-      const [bqSuccess, gcsSuccess] = await Promise.all([
-      testBigQueryConnection(),
-      testGCSConnection()]
-      );
+    for (const test of tests) {
+      // Set test as running
+      setTestResults((prev) => [...prev, {
+        name: test.name,
+        status: 'running'
+      }]);
 
-      const allSuccess = bqSuccess && gcsSuccess;
+      try {
+        const message = await test.test();
 
-      if (allSuccess) {
-        console.log('✅ All connections successful - enabling real processing');
-
-        // Auto-enable real processing when all connections are successful
-        configService.enableRealProcessingIfReady();
-
-        setTestResult((prev) => ({
-          ...prev,
-          overall: {
-            status: 'success',
-            message: 'All connections successful! Real processing enabled.',
-            details: 'Your application is ready for production data processing'
-          }
-        }));
+        // Update test as successful
+        setTestResults((prev) => prev.map((result) =>
+        result.name === test.name ?
+        { ...result, status: 'success', message } :
+        result
+        ));
 
         toast({
-          title: "🎉 Connections Successful!",
-          description: "All services are connected and real processing is now enabled. You can start processing data.",
-          duration: 5000
+          title: `${test.name} Test Passed`,
+          description: message
         });
-      } else {
-        setTestResult((prev) => ({
-          ...prev,
-          overall: {
-            status: 'error',
-            message: 'Some connections failed',
-            details: 'Please fix the failed connections before proceeding'
-          }
-        }));
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+        // Update test as failed
+        setTestResults((prev) => prev.map((result) =>
+        result.name === test.name ?
+        { ...result, status: 'error', message: errorMessage } :
+        result
+        ));
 
         toast({
-          title: "❌ Connection Issues",
-          description: "Some services failed to connect. Please check your configuration.",
+          title: `${test.name} Test Failed`,
+          description: errorMessage,
           variant: "destructive"
         });
       }
-    } catch (error) {
-      console.error('Connection test error:', error);
-      setTestResult((prev) => ({
-        ...prev,
-        overall: {
-          status: 'error',
-          message: 'Connection test failed',
-          details: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }));
-    } finally {
-      setIsTestingAll(false);
+    }
+
+    setIsRunning(false);
+  };
+
+  const getStatusIcon = (status: 'running' | 'success' | 'error') => {
+    switch (status) {
+      case 'running':
+        return <Clock className="h-4 w-4 text-blue-500 animate-pulse" data-id="uwzm0ld4s" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" data-id="cu994e0i6" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" data-id="nabw1fzv8" data-path="src/components/diagnostics/ConnectionTest.tsx" />;
     }
   };
 
+  const getStatusBadge = (status: 'running' | 'success' | 'error') => {
+    switch (status) {
+      case 'running':
+        return <Badge variant="secondary" data-id="fx408u4qt" data-path="src/components/diagnostics/ConnectionTest.tsx">Running</Badge>;
+      case 'success':
+        return <Badge variant="default" className="bg-green-500" data-id="iffs19fsf" data-path="src/components/diagnostics/ConnectionTest.tsx">Passed</Badge>;
+      case 'error':
+        return <Badge variant="destructive" data-id="8bgqak0t7" data-path="src/components/diagnostics/ConnectionTest.tsx">Failed</Badge>;
+    }
+  };
+
+  const currentUser = authService.getCurrentUser();
   const config = configService.getConfig();
-  const authMethod = configService.getAuthMethod();
-  const hasServiceAccount = !!configService.getServiceAccountKey();
-  const isRealProcessingEnabled = configService.isRealProcessingEnabled();
 
   return (
-    <div className="space-y-6" data-id="k9g6xi5mg" data-path="src/components/diagnostics/ConnectionTest.tsx">
-      <Card data-id="507lnog5c" data-path="src/components/diagnostics/ConnectionTest.tsx">
-        <CardHeader data-id="fq5tqw3so" data-path="src/components/diagnostics/ConnectionTest.tsx">
-          <CardTitle className="flex items-center gap-2" data-id="kpvi1h54n" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            <Zap className="h-5 w-5" data-id="oafzv26p1" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-            Connection Diagnostics
+    <div className="space-y-6" data-id="eobe7uo6w" data-path="src/components/diagnostics/ConnectionTest.tsx">
+      <Card data-id="8j6ehxcco" data-path="src/components/diagnostics/ConnectionTest.tsx">
+        <CardHeader data-id="8gu5ve464" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          <CardTitle className="flex items-center gap-2" data-id="rdhgv3227" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            <Settings className="h-5 w-5" data-id="3o7hmphye" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+            Connection Tests
           </CardTitle>
-          <CardDescription data-id="apl5wy4s3" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            Test your BigQuery and Google Cloud Storage connections
+          <CardDescription data-id="ago0p70o9" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            Test your connections to Google Cloud services to ensure everything is configured correctly.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6" data-id="vtzgpynva" data-path="src/components/diagnostics/ConnectionTest.tsx">
-          {/* Configuration Status */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg" data-id="bi84vvrk3" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            <div data-id="523xwo382" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <p className="font-medium" data-id="0olu2720l" data-path="src/components/diagnostics/ConnectionTest.tsx">Current Configuration</p>
-              <p className="text-sm text-gray-600" data-id="3hvefvkm1" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                Auth: {authMethod} • Real Processing: {isRealProcessingEnabled ? 'Enabled' : 'Disabled'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2" data-id="ruro58w65" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              {hasServiceAccount ?
-              <Badge variant="default" className="bg-green-100 text-green-800" data-id="s8kpko3qq" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  Service Account Configured
-                </Badge> :
-
-              <Badge variant="outline" data-id="hary7zqv2" data-path="src/components/diagnostics/ConnectionTest.tsx">No Service Account</Badge>
-              }
-            </div>
-          </div>
-
-          {/* Test All Button */}
-          <div className="flex justify-center" data-id="064bvwapx" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            <Button
-              onClick={testAllConnections}
-              disabled={isTestingAll || !hasServiceAccount}
-              size="lg"
-              className="min-w-48" data-id="27kp7iosg" data-path="src/components/diagnostics/ConnectionTest.tsx">
-
-              {isTestingAll ?
-              <>
-                  <Clock className="h-4 w-4 mr-2 animate-spin" data-id="zx5btixua" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-                  Testing Connections...
-                </> :
-
-              <>
-                  <Zap className="h-4 w-4 mr-2" data-id="xmb0ka9al" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-                  Test All Connections
-                </>
-              }
-            </Button>
-          </div>
-
-          {/* Overall Status */}
-          {testResult.overall.status !== 'idle' &&
-          <Alert className={testResult.overall.status === 'success' ? 'border-green-200 bg-green-50' :
-          testResult.overall.status === 'error' ? 'border-red-200 bg-red-50' :
-          'border-blue-200 bg-blue-50'} data-id="v3k99936d" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <div className="flex items-center gap-2" data-id="52s5709rc" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                {getStatusIcon(testResult.overall.status)}
-                <AlertDescription data-id="bk32qjv9p" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <strong data-id="ahszw9l9y" data-path="src/components/diagnostics/ConnectionTest.tsx">{testResult.overall.message}</strong>
-                  {testResult.overall.details &&
-                <div className="text-sm text-gray-600 mt-1" data-id="fnmxs0bz8" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                      {testResult.overall.details}
-                    </div>
-                }
-                </AlertDescription>
+        <CardContent className="space-y-4" data-id="fiuxy6dwl" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          {/* Current Status */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-id="l8s4n4pvh" data-path="src/components/diagnostics/ConnectionTest.tsx">
+            <div className="text-center p-3 border rounded-lg" data-id="xmnuodr2m" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <User className="h-8 w-8 mx-auto mb-2 text-blue-500" data-id="vfn9ov40g" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <div className="text-sm font-medium" data-id="i0zqzmgf0" data-path="src/components/diagnostics/ConnectionTest.tsx">Current User</div>
+              <div className="text-xs text-muted-foreground" data-id="inscjibo9" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                {currentUser?.email || 'Not authenticated'}
               </div>
-            </Alert>
+            </div>
+            <div className="text-center p-3 border rounded-lg" data-id="jhjkrzn7g" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Cloud className="h-8 w-8 mx-auto mb-2 text-green-500" data-id="p0tqwvlmo" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <div className="text-sm font-medium" data-id="zi01g22pg" data-path="src/components/diagnostics/ConnectionTest.tsx">Project ID</div>
+              <div className="text-xs text-muted-foreground" data-id="lwgwp1vb1" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                {config.gcpProjectId || 'Not configured'}
+              </div>
+            </div>
+            <div className="text-center p-3 border rounded-lg" data-id="3jz7kg5oi" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Database className="h-8 w-8 mx-auto mb-2 text-purple-500" data-id="wow5zchqe" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <div className="text-sm font-medium" data-id="e8ht8rzt8" data-path="src/components/diagnostics/ConnectionTest.tsx">Dataset</div>
+              <div className="text-xs text-muted-foreground" data-id="oseganwt9" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                {config.bigqueryDataset || 'Not configured'}
+              </div>
+            </div>
+          </div>
+
+          {/* Run Tests Button */}
+          <Button
+            onClick={runTests}
+            disabled={isRunning}
+            className="w-full" data-id="jenb3v85m" data-path="src/components/diagnostics/ConnectionTest.tsx">
+
+            {isRunning ?
+            <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" data-id="e1ayvz4rg" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                Running Tests...
+              </> :
+
+            <>
+                <RefreshCw className="h-4 w-4 mr-2" data-id="5yxk27743" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                Run All Tests
+              </>
+            }
+          </Button>
+
+          {/* Test Results */}
+          {testResults.length > 0 &&
+          <div className="space-y-3" data-id="g9x0yqgi5" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Separator data-id="1a7i7gw1s" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <div className="space-y-2" data-id="k3wj53buu" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                {testResults.map((result, index) => {
+                const test = tests[index];
+                const Icon = test.icon;
+
+                return (
+                  <div key={result.name} className="flex items-center justify-between p-3 border rounded-lg" data-id="qcgmn2qgf" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <div className="flex items-center gap-3" data-id="c2kqwomd5" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                        <Icon className="h-4 w-4 text-gray-500" data-id="1bfi40x2k" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                        <div data-id="hqyv0wvut" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                          <div className="font-medium" data-id="fget55cih" data-path="src/components/diagnostics/ConnectionTest.tsx">{result.name}</div>
+                          <div className="text-sm text-muted-foreground" data-id="4uyn6oz8l" data-path="src/components/diagnostics/ConnectionTest.tsx">{test.description}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2" data-id="hd446rrz4" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                        {getStatusIcon(result.status)}
+                        {getStatusBadge(result.status)}
+                      </div>
+                    </div>);
+
+              })}
+              </div>
+            </div>
           }
 
-          <Separator data-id="0y53bzpv0" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+          {/* Error Messages */}
+          {testResults.some((result) => result.status === 'error') &&
+          <div className="space-y-2" data-id="b4szaajyj" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Separator data-id="kuvdw8tbi" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+              <div className="space-y-2" data-id="w9l4kmkgn" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                {testResults.
+              filter((result) => result.status === 'error').
+              map((result) =>
+              <Alert key={result.name} className="border-red-200 bg-red-50" data-id="zlrqickgk" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <AlertCircle className="h-4 w-4 text-red-600" data-id="xlbkai87d" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                      <AlertDescription className="text-red-800" data-id="0aite85p1" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                        <strong data-id="qvhcv0rf4" data-path="src/components/diagnostics/ConnectionTest.tsx">{result.name}:</strong> {result.message}
+                      </AlertDescription>
+                    </Alert>
+              )}
+              </div>
+            </div>
+          }
 
-          {/* Individual Connection Tests */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-id="cx0ck1z2q" data-path="src/components/diagnostics/ConnectionTest.tsx">
-            {/* BigQuery Connection */}
-            <Card data-id="tdsj46bm4" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <CardHeader className="pb-3" data-id="97yddwdwj" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <CardTitle className="text-lg flex items-center justify-between" data-id="7mmkk6t1r" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <span data-id="1we0nu6wm" data-path="src/components/diagnostics/ConnectionTest.tsx">BigQuery</span>
-                  {getStatusBadge(testResult.bigquery.status)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent data-id="as2jchbgc" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <div className="space-y-3" data-id="ath0ppl6l" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <Button
-                    variant="outline"
-                    onClick={testBigQueryConnection}
-                    disabled={testResult.bigquery.status === 'testing' || !hasServiceAccount}
-                    className="w-full" data-id="0ohnsvnek" data-path="src/components/diagnostics/ConnectionTest.tsx">
+          {/* Special handling for GCS permission errors */}
+          {gcsError && gcsError.includes('permission') &&
+          <div className="space-y-2" data-id="in5swew06" data-path="src/components/diagnostics/ConnectionTest.tsx">
+              <Alert className="border-orange-200 bg-orange-50" data-id="bagi7s321" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <HelpCircle className="h-4 w-4 text-orange-600" data-id="u8zczyzab" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                <AlertDescription className="text-orange-800" data-id="wis8n6jlu" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <strong data-id="17uu5fm2b" data-path="src/components/diagnostics/ConnectionTest.tsx">Permission Issue Detected:</strong> It looks like you need additional Google Cloud Storage permissions.
+                </AlertDescription>
+              </Alert>
+              
+              <div className="flex gap-2" data-id="qgcycuoox" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                <Dialog open={showGCSGuide} onOpenChange={setShowGCSGuide} data-id="hhum86j49" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                  <DialogTrigger asChild data-id="7zh406ojl" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    <Button variant="outline" size="sm" data-id="0j7m4ym5q" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <HelpCircle className="h-4 w-4 mr-2" data-id="eoe2ffvce" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                      How to Fix This
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto" data-id="64ixzzemi" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                    <DialogHeader data-id="gs6fziou2" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                      <DialogTitle data-id="lp0n6vr1e" data-path="src/components/diagnostics/ConnectionTest.tsx">Resolve GCS Permission Issue</DialogTitle>
+                      <DialogDescription data-id="cfr3mum8x" data-path="src/components/diagnostics/ConnectionTest.tsx">
+                        Follow these steps to grant the required Google Cloud Storage permissions.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <GCSPermissionGuide
+                    error={gcsError}
+                    userEmail={currentUser?.email}
+                    projectId={config.gcpProjectId} data-id="ckvg3ktph" data-path="src/components/diagnostics/ConnectionTest.tsx" />
 
-                    {testResult.bigquery.status === 'testing' ?
-                    <>
-                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="ke7460t0l" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-                        Testing...
-                      </> :
+                  </DialogContent>
+                </Dialog>
 
-                    'Test BigQuery Connection'
-                    }
-                  </Button>
+                <Button
+                variant="outline"
+                size="sm"
+                onClick={() => authService.reauthorizeWithFullScopes()} data-id="ueaujh5oy" data-path="src/components/diagnostics/ConnectionTest.tsx">
 
-                  {testResult.bigquery.message &&
-                  <div className="text-sm" data-id="4knj7y0gc" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                      <p className={testResult.bigquery.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="ezjamjkic" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                        {testResult.bigquery.message}
-                      </p>
-                      {testResult.bigquery.details &&
-                    <p className="text-gray-600 mt-1" data-id="v3rviv45l" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                          {testResult.bigquery.details}
-                        </p>
-                    }
-                    </div>
-                  }
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* GCS Connection */}
-            <Card data-id="93d23whvy" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <CardHeader className="pb-3" data-id="pf9z49yuk" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <CardTitle className="text-lg flex items-center justify-between" data-id="4z4jsvjbx" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <span data-id="1rv9h9hmw" data-path="src/components/diagnostics/ConnectionTest.tsx">Cloud Storage</span>
-                  {getStatusBadge(testResult.gcs.status)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent data-id="ki35fjzkm" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <div className="space-y-3" data-id="9upg211jb" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                  <Button
-                    variant="outline"
-                    onClick={testGCSConnection}
-                    disabled={testResult.gcs.status === 'testing' || !hasServiceAccount}
-                    className="w-full" data-id="m91c0kkzv" data-path="src/components/diagnostics/ConnectionTest.tsx">
-
-                    {testResult.gcs.status === 'testing' ?
-                    <>
-                        <Clock className="h-4 w-4 mr-2 animate-spin" data-id="v8sf9sdnu" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-                        Testing...
-                      </> :
-
-                    'Test GCS Connection'
-                    }
-                  </Button>
-
-                  {testResult.gcs.message &&
-                  <div className="text-sm" data-id="jxtvu0835" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                      <p className={testResult.gcs.status === 'success' ? 'text-green-600' : 'text-red-600'} data-id="nms7m0ezy" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                        {testResult.gcs.message}
-                      </p>
-                      {testResult.gcs.details &&
-                    <p className="text-gray-600 mt-1" data-id="1851k11m8" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                          {testResult.gcs.details}
-                        </p>
-                    }
-                    </div>
-                  }
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {!hasServiceAccount &&
-          <Alert data-id="y6duycj5d" data-path="src/components/diagnostics/ConnectionTest.tsx">
-              <AlertCircle className="h-4 w-4" data-id="cpvtttvk4" data-path="src/components/diagnostics/ConnectionTest.tsx" />
-              <AlertDescription data-id="o6qaz1yu7" data-path="src/components/diagnostics/ConnectionTest.tsx">
-                <strong data-id="l83slfjip" data-path="src/components/diagnostics/ConnectionTest.tsx">Service Account Required:</strong> Please configure your service account in the Production Setup tab before testing connections.
-              </AlertDescription>
-            </Alert>
+                  <Key className="h-4 w-4 mr-2" data-id="lzjsnj3h9" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+                  Re-authenticate
+                </Button>
+              </div>
+            </div>
           }
         </CardContent>
       </Card>
 
-      {/* API Diagnostics */}
-      <ApiDiagnostics data-id="llh1zf8va" data-path="src/components/diagnostics/ConnectionTest.tsx" />
+      {/* OAuth Manager */}
+      <OAuthManager data-id="ov9su3h99" data-path="src/components/diagnostics/ConnectionTest.tsx" />
     </div>);
 
 };

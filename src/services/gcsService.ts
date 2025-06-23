@@ -1,4 +1,5 @@
 import { configService } from './configService';
+import { authService } from './authService';
 
 interface GCSUploadResult {
   gcsUri: string;
@@ -7,165 +8,83 @@ interface GCSUploadResult {
   size: number;
 }
 
+interface GCSConnectionTestResult {
+  success: boolean;
+  error?: string;
+  method: string;
+  bucket?: string;
+  permissionDetails?: {
+    hasListPermission: boolean;
+    hasReadPermission: boolean;
+    hasWritePermission: boolean;
+    missingPermissions: string[];
+  };
+}
+
 export class GCSService {
-  private authMethod: 'api-gateway' | 'service-account' | 'oauth';
-  private serviceAccountKey?: string;
-  private apiEndpoint: string;
-  private apiKey: string;
-  private accessToken?: string;
-  private tokenExpiry?: number;
+  private baseUrl = 'https://storage.googleapis.com/storage/v1';
+  private uploadUrl = 'https://storage.googleapis.com/upload/storage/v1';
 
   constructor() {
-    const config = configService.getConfig();
-    this.authMethod = config.authMethod || 'oauth';
-    this.serviceAccountKey = config.serviceAccountKey;
-    this.apiEndpoint = config.apiEndpoint || 'https://storage.googleapis.com/storage/v1';
-    this.apiKey = config.apiKey || '';
-  }
-
-  private async getAccessToken(): Promise<string> {
-    console.log('🔐 Getting GCS access token...', { authMethod: this.authMethod });
-
-    if (this.authMethod === 'api-gateway') {
-      // For API Gateway, use the provided API key
-      if (!this.apiKey) {
-        throw new Error('API key is required for API Gateway authentication');
-      }
-      return this.apiKey;
-    } else if (this.authMethod === 'oauth') {
-      // For OAuth, initiate Google OAuth flow
-      return this.initiateOAuthFlow();
-    } else if (this.authMethod === 'service-account') {
-      // Service account mode - show helpful error
-      throw new Error(
-        '❌ SERVICE ACCOUNT AUTHENTICATION NOT SUPPORTED\n\n' +
-        'Browser-based applications cannot securely use service account keys.\n' +
-        'This is a security limitation of web browsers.\n\n' +
-        'Available options:\n' +
-        '1. Use OAuth authentication (recommended)\n' +
-        '2. Use API Gateway mode with your backend\n' +
-        '3. Deploy this as a server-side application\n\n' +
-        'Please switch to OAuth or API Gateway mode.'
-      );
-    }
-
-    throw new Error('Invalid authentication method');
-  }
-
-  private async initiateOAuthFlow(): Promise<string> {
-    // Check if we have a valid cached token
-    if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
-      console.log('✅ Using cached GCS access token');
-      return this.accessToken;
-    }
-
-    console.log('🔐 Initiating Google OAuth flow for GCS...');
-
-    // For demo purposes, we'll simulate the OAuth flow
-    // In a real implementation, you would:
-    // 1. Redirect to Google OAuth endpoint
-    // 2. Handle the callback
-    // 3. Exchange authorization code for access token
-
-    const clientId = '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com';
-    const redirectUri = window.location.origin + '/oauth/callback';
-    const scope = 'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/devstorage.read_write';
-
-    console.log('📝 OAuth Configuration for GCS:', {
-      clientId: 'demo-client-id',
-      redirectUri,
-      scope,
-      note: 'This is a demo implementation. Configure proper OAuth in production.'
-    });
-
-    // Return a demo token for testing
-    const demoToken = 'demo-gcs-oauth-token-' + Math.random().toString(36).substr(2, 9);
-
-    // Cache the token (simulate 1 hour expiry)
-    this.accessToken = demoToken;
-    this.tokenExpiry = Date.now() + 60 * 60 * 1000;
-
-    console.log('✅ GCS OAuth token obtained (demo mode)');
-    return demoToken;
+    console.log('🔧 GCSService initialized with OAuth authentication');
   }
 
   private async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = await this.getAccessToken();
+    console.log('🌐 Making authenticated GCS request to:', url.replace(this.baseUrl, ''));
 
-    const headers = {
-      'Authorization': `Bearer ${token}`,
-      ...options.headers
-    };
-
-    console.log('🌐 Making authenticated GCS request to:', url);
-
-    // For demo mode, simulate API responses
-    if (token.startsWith('demo-gcs-oauth-token') || this.authMethod === 'oauth') {
-      return this.simulateGCSApiResponse(url, options);
+    try {
+      return await authService.authenticatedFetch(url, options);
+    } catch (error) {
+      console.error('❌ GCS API request failed:', error);
+      throw error;
     }
-
-    return fetch(url, {
-      ...options,
-      headers
-    });
   }
 
-  private async simulateGCSApiResponse(url: string, options: RequestInit = {}): Promise<Response> {
-    console.log('🎭 Simulating GCS API response for:', url, options.method || 'GET');
-
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 700));
-
-    // Simulate different responses based on URL and method
-    if (url.includes('/upload') && options.method === 'POST') {
-      const bucket = 'demo-shapefile-uploads';
-      const fileName = `upload_${Date.now()}.zip`;
-      return new Response(JSON.stringify({
-        gcsUri: `gs://${bucket}/${fileName}`,
-        bucket: bucket,
-        name: fileName,
-        size: 1024000,
-        contentType: 'application/zip',
-        timeCreated: new Date().toISOString()
-      }), { status: 200, headers: { 'content-type': 'application/json' } });
+  private parseGCSError(error: any): string {
+    if (error.message) {
+      // Check for specific permission errors
+      if (error.message.includes('storage.buckets.list')) {
+        return `Permission denied: Your account (${authService.getCurrentUser()?.email}) does not have the 'storage.buckets.list' permission. Please ask your Google Cloud administrator to grant you the "Storage Legacy Bucket Reader" role or "Storage Admin" role.`;
+      }
+      if (error.message.includes('storage.objects.list')) {
+        return `Permission denied: Your account (${authService.getCurrentUser()?.email}) does not have the 'storage.objects.list' permission. Please ask your Google Cloud administrator to grant you the "Storage Object Viewer" role or "Storage Object Admin" role.`;
+      }
+      if (error.message.includes('storage.objects.create')) {
+        return `Permission denied: Your account (${authService.getCurrentUser()?.email}) does not have the 'storage.objects.create' permission. Please ask your Google Cloud administrator to grant you the "Storage Object Creator" role or "Storage Object Admin" role.`;
+      }
+      if (error.message.includes('Permission') || error.message.includes('permission')) {
+        return `Permission denied: ${error.message}. Please check that your account has the required Google Cloud Storage permissions.`;
+      }
+      if (error.message.includes('403')) {
+        return `Access forbidden (403): Your account may not have sufficient permissions to access this Google Cloud Storage resource.`;
+      }
+      if (error.message.includes('401')) {
+        return `Authentication required (401): Please sign in again to refresh your permissions.`;
+      }
     }
-
-    if (url.includes('/test') && options.method === 'GET') {
-      return new Response(JSON.stringify({
-        success: true,
-        service: 'Google Cloud Storage',
-        bucket: 'demo-shapefile-uploads',
-        permissions: ['read', 'write'],
-        region: 'us-central1'
-      }), { status: 200, headers: { 'content-type': 'application/json' } });
-    }
-
-    if (url.includes('/signed-url') && options.method === 'POST') {
-      return new Response(JSON.stringify({
-        signedUrl: 'https://storage.googleapis.com/demo-bucket/demo-file?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=demo'
-      }), { status: 200, headers: { 'content-type': 'application/json' } });
-    }
-
-    // Default success response
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' }
-    });
+    return error.message || 'Unknown error occurred';
   }
 
   async uploadFile(file: File, bucketName?: string, destinationPath?: string): Promise<GCSUploadResult> {
-    console.log('🔍 Starting GCS file upload:', {
-      fileName: file.name,
-      fileSize: file.size,
-      authMethod: this.authMethod,
+    console.log('📤 Starting GCS file upload:', {
+      fileName: file?.name || 'undefined',
+      fileSize: file?.size || 0,
       bucketName,
       destinationPath,
-      isProductionModeEnabled: configService.isRealProcessingEnabled()
+      isAuthenticated: authService.isAuthenticated()
     });
 
     // Validate inputs
-    if (!file || file.size === 0) {
-      throw new Error('Invalid file for upload');
+    if (!file) {
+      throw new Error('No file provided for upload');
+    }
+
+    if (!file.name) {
+      throw new Error('File name is required');
+    }
+
+    if (file.size === 0) {
+      throw new Error('Cannot upload empty file');
     }
 
     // Check file size (100MB limit)
@@ -174,119 +93,48 @@ export class GCSService {
       throw new Error(`File size (${Math.round(file.size / 1024 / 1024)}MB) exceeds maximum allowed size (100MB)`);
     }
 
-    if (this.authMethod === 'service-account') {
-      console.error('❌ SERVICE ACCOUNT MODE NOT SUPPORTED FOR FILE UPLOAD');
-      console.error('Browser-based applications cannot securely authenticate with Google Cloud using service account keys.');
-      console.error('Please use OAuth or API Gateway mode.');
-
-      throw new Error(
-        '❌ SERVICE ACCOUNT UPLOAD NOT SUPPORTED\n\n' +
-        'Browser-based applications cannot securely upload files to Google Cloud Storage using service account keys.\n\n' +
-        'Available options:\n' +
-        '1. Use OAuth authentication (recommended)\n' +
-        '2. Use API Gateway mode with your backend\n' +
-        '3. Use signed URLs from a backend service\n\n' +
-        'The system will use mock mode for demonstration.'
-      );
-    } else if (this.authMethod === 'api-gateway') {
-      return this.uploadViaAPI(file, bucketName, destinationPath);
-    } else if (this.authMethod === 'oauth') {
-      return this.uploadViaOAuth(file, bucketName, destinationPath);
+    // Check authentication
+    if (!authService.isAuthenticated()) {
+      throw new Error('Not authenticated. Please sign in with Google OAuth.');
     }
 
-    throw new Error('Invalid authentication method configured');
-  }
-
-  private async uploadViaAPI(file: File, bucketName?: string, destinationPath?: string): Promise<GCSUploadResult> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    if (bucketName) {
-      formData.append('bucket', bucketName);
+    // Validate token and scopes
+    const validation = await authService.validateToken();
+    if (!validation.valid) {
+      throw new Error(`Authentication failed: ${validation.error}`);
     }
 
-    if (destinationPath) {
-      formData.append('destination', destinationPath);
+    const hasScopes = await authService.hasRequiredScopes();
+    if (!hasScopes) {
+      const missingScopes = await authService.getMissingScopes();
+      throw new Error(`Missing required permissions: ${missingScopes.join(', ')}`);
     }
 
-    console.log('Making API upload request to:', `${this.apiEndpoint}/gcs/upload`);
-
-    // Create request with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      controller.abort();
-    }, 60000); // 60 second timeout
+    const bucket = bucketName || configService.getDefaultBucket();
+    const fileName = destinationPath || `uploads/${Date.now()}_${file.name}`;
 
     try {
-      const response = await fetch(`${this.apiEndpoint}/gcs/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: formData,
-        signal: controller.signal
-      });
+      // First, ensure bucket exists (for demo we'll skip this)
+      console.log('🪣 Using bucket:', bucket);
 
-      clearTimeout(timeoutId);
+      // Upload file using resumable upload
+      const uploadResult = await this.performResumableUpload(file, bucket, fileName);
 
-      if (!response.ok) {
-        let errorMessage: string;
-        const contentType = response.headers.get('content-type');
-
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
-          } catch {
-            errorMessage = `HTTP ${response.status} ${response.statusText}`;
-          }
-        } else {
-          try {
-            errorMessage = (await response.text()) || `HTTP ${response.status} ${response.statusText}`;
-          } catch {
-            errorMessage = `HTTP ${response.status} ${response.statusText}`;
-          }
-        }
-
-        // Handle specific error codes
-        if (response.status === 413) {
-          throw new Error('File too large. Please ensure your file is under 100MB.');
-        } else if (response.status === 401) {
-          throw new Error('Authentication failed. Please check your API key configuration.');
-        } else if (response.status === 403) {
-          throw new Error('Access denied. Please check your permissions.');
-        } else if (response.status === 404) {
-          throw new Error('Upload endpoint not found. Please check your API configuration.');
-        } else if (response.status >= 500) {
-          throw new Error(`Server error (${response.status}). Please try again later.`);
-        }
-
-        throw new Error(`File upload failed: ${errorMessage}`);
-      }
-
-      const result = await response.json();
-
-      if (!result.gcsUri) {
-        throw new Error('Upload response missing GCS URI');
-      }
-
-      console.log('✅ File upload completed successfully via API:', result.gcsUri);
-
-      return {
-        gcsUri: result.gcsUri,
-        bucket: result.bucket || 'unknown',
-        name: result.name || file.name,
-        size: file.size
-      };
+      console.log('✅ File upload completed successfully:', uploadResult.gcsUri);
+      return uploadResult;
 
     } catch (error) {
-      clearTimeout(timeoutId);
+      console.error('❌ File upload failed:', error);
 
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          throw new Error('Upload timeout. The file upload took too long. Please try with a smaller file or check your connection.');
-        } else if (error.message.includes('Failed to fetch')) {
-          throw new Error('Network error. Please check your internet connection and API endpoint configuration.');
+        if (error.message.includes('authentication') || error.message.includes('token')) {
+          throw new Error('Authentication failed. Please sign in again with Google OAuth.');
+        } else if (error.message.includes('permission') || error.message.includes('scope')) {
+          throw new Error('Insufficient permissions. Please ensure you have granted all required permissions.');
+        } else if (error.message.includes('quota')) {
+          throw new Error('Storage quota exceeded. Please check your Google Cloud Storage limits.');
+        } else if (error.message.includes('timeout')) {
+          throw new Error('Upload timeout. Please try with a smaller file or check your connection.');
         }
       }
 
@@ -294,220 +142,285 @@ export class GCSService {
     }
   }
 
-  private async uploadViaOAuth(file: File, bucketName?: string, destinationPath?: string): Promise<GCSUploadResult> {
-    console.log('🔐 Uploading file via OAuth...');
+  private async performResumableUpload(file: File, bucket: string, fileName: string): Promise<GCSUploadResult> {
+    console.log('🔄 Starting resumable upload...');
 
-    // Get access token
-    const token = await this.getAccessToken();
-
-    // For demo mode, simulate successful upload
-    if (token.startsWith('demo-gcs-oauth-token')) {
-      console.log('🎭 Simulating OAuth file upload...');
-
-      // Simulate upload delay
-      await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000));
-
-      const defaultBucket = bucketName || configService.getDefaultBucket();
-      const fileName = destinationPath || `uploads/${Date.now()}_${file.name}`;
-
-      const result = {
-        gcsUri: `gs://${defaultBucket}/${fileName}`,
-        bucket: defaultBucket,
-        name: fileName,
-        size: file.size
-      };
-
-      console.log('✅ OAuth file upload completed (demo mode):', result.gcsUri);
-      return result;
+    // Validate parameters
+    if (!file) {
+      throw new Error('File is required for upload');
     }
 
-    // In a real implementation, you would:
-    // 1. Use the access token to make authenticated requests to GCS
-    // 2. Handle multipart uploads for large files
-    // 3. Provide upload progress feedback
+    if (!bucket) {
+      throw new Error('Bucket name is required for upload');
+    }
 
-    throw new Error('Real OAuth upload not implemented yet');
-  }
+    if (!fileName) {
+      throw new Error('File name is required for upload');
+    }
 
-  async testConnection(): Promise<{
-    success: boolean;
-    error?: string;
-    method: string;
-    bucket?: string;
-  }> {
-    try {
-      console.log('🔍 Testing GCS connection...', {
-        authMethod: this.authMethod,
-        hasServiceAccountKey: !!this.serviceAccountKey,
-        isProductionModeEnabled: configService.isRealProcessingEnabled()
-      });
+    if (typeof file.size === 'undefined') {
+      throw new Error('File size is undefined');
+    }
 
-      if (this.authMethod === 'service-account') {
-        console.error('❌ SERVICE ACCOUNT MODE NOT SUPPORTED');
-        console.error('Browser-based applications cannot securely authenticate with Google Cloud Storage using service account keys.');
-        console.error('Please use OAuth or API Gateway mode.');
+    // Step 1: Initiate resumable upload
+    const initUrl = `${this.uploadUrl}/b/${bucket}/o?uploadType=resumable&name=${encodeURIComponent(fileName)}`;
 
-        throw new Error(
-          '❌ SERVICE ACCOUNT AUTHENTICATION NOT SUPPORTED\n\n' +
-          'Browser-based applications cannot securely sign JWTs with private keys.\n' +
-          'This is a fundamental security limitation of web browsers.\n\n' +
-          'Available options:\n' +
-          '1. Use OAuth authentication (recommended for user access)\n' +
-          '2. Use API Gateway mode (recommended for service access)\n' +
-          '3. Deploy as a server-side application\n\n' +
-          'The system will use mock mode for demonstration purposes.'
-        );
+    const initResponse = await this.makeAuthenticatedRequest(initUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': file.type || 'application/octet-stream',
+        'X-Upload-Content-Length': file.size.toString()
+      },
+      body: JSON.stringify({
+        name: fileName,
+        contentType: file.type || 'application/octet-stream'
+      })
+    });
 
-      } else if (this.authMethod === 'api-gateway') {
-        // API Gateway method
-        if (!this.apiEndpoint) {
-          throw new Error('API endpoint is required for GCS connection');
-        }
+    if (!initResponse.ok) {
+      const errorData = await initResponse.json();
+      const errorMessage = errorData.error?.message || 'Unknown error';
 
-        if (!this.apiKey) {
-          throw new Error('API key is required for GCS connection');
-        }
+      console.error('❌ Upload initiation failed:', errorMessage);
+      throw new Error(`Failed to initiate upload: ${errorMessage}`);
+    }
 
-        console.log('🔍 Testing API Gateway connection...');
+    const uploadUrl = initResponse.headers.get('Location');
+    if (!uploadUrl) {
+      throw new Error('No upload URL received from GCS');
+    }
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-        }, 10000); // 10 second timeout
+    console.log('🔗 Upload URL obtained, uploading file...');
 
-        const response = await fetch(`${this.apiEndpoint}/gcs/test`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`
-          },
-          signal: controller.signal
-        });
+    // Step 2: Upload file content
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream'
+      },
+      body: file
+    });
 
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`API connection failed: ${response.status} ${errorText}`);
-        }
-
-        console.log('✅ GCS connection test passed for API gateway');
-
-        return {
-          success: true,
-          method: 'api-gateway'
-        };
-
-      } else if (this.authMethod === 'oauth') {
-        // OAuth method
-        console.log('🔍 Testing OAuth connection...');
-
-        try {
-          const token = await this.getAccessToken();
-          console.log('✅ OAuth token obtained successfully for GCS');
-
-          // Test a simple API call with the token
-          const testUrl = `${this.apiEndpoint}/gcs/test`;
-
-          const response = await this.makeAuthenticatedRequest(testUrl);
-
-          if (!response.ok) {
-            throw new Error(`OAuth test API call failed: ${response.status}`);
-          }
-
-          console.log('✅ GCS connection test passed for OAuth');
-
-          return {
-            success: true,
-            method: 'oauth',
-            bucket: configService.getDefaultBucket()
-          };
-
-        } catch (error) {
-          console.error('❌ OAuth connection test failed:', error);
-          throw error;
-        }
+    if (!uploadResponse.ok) {
+      let errorMessage: string;
+      try {
+        const errorData = await uploadResponse.json();
+        errorMessage = errorData.error?.message || `HTTP ${uploadResponse.status}`;
+      } catch {
+        errorMessage = `HTTP ${uploadResponse.status} ${uploadResponse.statusText}`;
       }
 
-      throw new Error('Invalid authentication method configured');
+      console.error('❌ File upload failed:', errorMessage);
+      throw new Error(`File upload failed: ${errorMessage}`);
+    }
+
+    const result = await uploadResponse.json();
+
+    return {
+      gcsUri: `gs://${bucket}/${fileName}`,
+      bucket: bucket,
+      name: fileName,
+      size: file.size
+    };
+  }
+
+  async testConnection(): Promise<GCSConnectionTestResult> {
+    try {
+      console.log('🔍 Testing GCS connection...');
+
+      // Check if authenticated
+      if (!authService.isAuthenticated()) {
+        return {
+          success: false,
+          error: 'Not authenticated. Please sign in with Google OAuth.',
+          method: 'oauth'
+        };
+      }
+
+      // Validate token
+      const validation = await authService.validateToken();
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: `Token validation failed: ${validation.error}`,
+          method: 'oauth'
+        };
+      }
+
+      // Check required scopes
+      const hasScopes = await authService.hasRequiredScopes();
+      if (!hasScopes) {
+        const missingScopes = await authService.getMissingScopes();
+        return {
+          success: false,
+          error: `Missing required OAuth scopes: ${missingScopes.join(', ')}. Please re-authenticate to grant all required permissions.`,
+          method: 'oauth'
+        };
+      }
+
+      // Test detailed permissions
+      const permissionDetails = await this.testDetailedPermissions();
+
+      if (!permissionDetails.hasListPermission) {
+        const currentUser = authService.getCurrentUser();
+        return {
+          success: false,
+          error: this.parseGCSError({
+            message: `${currentUser?.email || 'User'} does not have storage.buckets.list access to the Google Cloud project. Permission 'storage.buckets.list' denied on resource (or it may not exist).`
+          }),
+          method: 'oauth',
+          permissionDetails
+        };
+      }
+
+      console.log('✅ GCS connection test passed');
+
+      return {
+        success: true,
+        method: 'oauth',
+        bucket: configService.getDefaultBucket(),
+        permissionDetails
+      };
 
     } catch (error) {
       console.error('❌ GCS connection test failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
+      const errorMessage = this.parseGCSError(error);
 
       return {
         success: false,
         error: errorMessage,
-        method: this.authMethod
+        method: 'oauth'
       };
     }
   }
 
-  async createSignedUrl(bucket: string, fileName: string, action: 'read' | 'write' = 'write'): Promise<string> {
-    if (this.authMethod === 'service-account') {
-      throw new Error('❌ Signed URL generation not supported for service account mode in browser environment');
-    } else if (this.authMethod === 'api-gateway') {
-      // Use API Gateway to generate signed URL
-      const response = await fetch(`${this.apiEndpoint}/gcs/signed-url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          bucket,
-          fileName,
-          action
-        })
-      });
+  private async testDetailedPermissions(): Promise<{
+    hasListPermission: boolean;
+    hasReadPermission: boolean;
+    hasWritePermission: boolean;
+    missingPermissions: string[];
+  }> {
+    const permissions = {
+      hasListPermission: false,
+      hasReadPermission: false,
+      hasWritePermission: false,
+      missingPermissions: [] as string[]
+    };
 
-      if (!response.ok) {
-        throw new Error('Failed to generate signed URL');
+    try {
+      // Test bucket list permission
+      const projectId = configService.getConfig().gcpProjectId || 'demo-project';
+      const listResponse = await this.makeAuthenticatedRequest(`${this.baseUrl}/b?project=${projectId}`);
+
+      if (listResponse.ok) {
+        permissions.hasListPermission = true;
+        console.log('✅ Storage bucket list permission: OK');
+      } else {
+        permissions.missingPermissions.push('storage.buckets.list');
+        console.log('❌ Storage bucket list permission: DENIED');
       }
-
-      const result = await response.json();
-      return result.signedUrl;
-    } else if (this.authMethod === 'oauth') {
-      // OAuth method - use the access token
-      const token = await this.getAccessToken();
-
-      const response = await this.makeAuthenticatedRequest(`${this.apiEndpoint}/gcs/signed-url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          bucket,
-          fileName,
-          action
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate signed URL via OAuth');
-      }
-
-      const result = await response.json();
-      return result.signedUrl;
+    } catch (error) {
+      permissions.missingPermissions.push('storage.buckets.list');
+      console.log('❌ Storage bucket list permission: ERROR', error);
     }
 
-    throw new Error('Invalid authentication method for signed URL generation');
+    // For now, we'll assume read/write permissions based on scopes
+    // In a production environment, you might want to test these against a specific bucket
+    const validation = await authService.validateToken();
+    if (validation.valid && validation.scopes) {
+      const hasStorageScope = validation.scopes.some((scope) =>
+      scope.includes('devstorage') || scope.includes('cloud-platform')
+      );
+
+      if (hasStorageScope) {
+        permissions.hasReadPermission = true;
+        permissions.hasWritePermission = true;
+      } else {
+        permissions.missingPermissions.push('storage.objects.list', 'storage.objects.create');
+      }
+    }
+
+    return permissions;
+  }
+
+  async createSignedUrl(bucket: string, fileName: string, action: 'read' | 'write' = 'write'): Promise<string> {
+    console.log('🔗 Creating signed URL:', { bucket, fileName, action });
+
+    if (!authService.isAuthenticated()) {
+      throw new Error('Not authenticated. Please sign in with Google OAuth.');
+    }
+
+    // For OAuth, we can't create signed URLs directly
+    // This would typically be done by a backend service
+    throw new Error('Signed URL generation requires a backend service with service account credentials');
   }
 
   // Method to clear cached tokens (useful for logout)
   clearAuthCache(): void {
-    this.accessToken = undefined;
-    this.tokenExpiry = undefined;
+    authService.clearToken();
     console.log('🧹 GCS authentication cache cleared');
   }
 
   // Method to check if user is authenticated
   isAuthenticated(): boolean {
-    if (this.authMethod === 'api-gateway') {
-      return !!(this.apiEndpoint && this.apiKey);
-    } else if (this.authMethod === 'oauth') {
-      return !!(this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry);
+    return authService.isAuthenticated();
+  }
+
+  // Get authentication status
+  getAuthStatus(): {
+    isAuthenticated: boolean;
+    willExpireSoon: boolean;
+    timeUntilExpiry: number | null;
+  } {
+    return {
+      isAuthenticated: authService.isAuthenticated(),
+      willExpireSoon: authService.willExpireSoon(),
+      timeUntilExpiry: authService.getTimeUntilExpiry()
+    };
+  }
+
+  // Get current user for error messages
+  getCurrentUser() {
+    return authService.getCurrentUser();
+  }
+
+  // Get detailed error information for troubleshooting
+  async getConnectionDiagnostics(): Promise<{
+    isAuthenticated: boolean;
+    tokenValid: boolean;
+    hasRequiredScopes: boolean;
+    missingScopes: string[];
+    userEmail?: string;
+    projectId?: string;
+    errorDetails?: string;
+  }> {
+    const user = authService.getCurrentUser();
+    const isAuthenticated = authService.isAuthenticated();
+
+    if (!isAuthenticated) {
+      return {
+        isAuthenticated: false,
+        tokenValid: false,
+        hasRequiredScopes: false,
+        missingScopes: [],
+        userEmail: user?.email
+      };
     }
-    return false;
+
+    const validation = await authService.validateToken();
+    const hasScopes = await authService.hasRequiredScopes();
+    const missingScopes = await authService.getMissingScopes();
+
+    return {
+      isAuthenticated,
+      tokenValid: validation.valid,
+      hasRequiredScopes: hasScopes,
+      missingScopes,
+      userEmail: user?.email,
+      projectId: configService.getConfig().gcpProjectId,
+      errorDetails: validation.error
+    };
   }
 }
 
