@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { jobService } from '@/services/jobService';
 import { configService } from '@/services/configService';
 import { authService } from '@/services/authService';
-import { ProcessingConfig } from '@/types';
+import { ProcessingConfig, Job } from '@/types';
 import FileUploadZone from '@/components/upload/FileUploadZone';
 import GCSPathInput from '@/components/upload/GCSPathInput';
 import SchemaDefinition from '@/components/schema/SchemaDefinition';
@@ -29,12 +29,15 @@ import {
   CheckCircle,
   Key,
   Info,
-  BookOpen } from
-'lucide-react';
+  BookOpen,
+} from 'lucide-react';
 
 const MainDashboard: React.FC = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // State for jobs
+  const [jobs, setJobs] = useState<Job[]>([]);
 
   // Processing Configuration State
   const [processingConfig, setProcessingConfig] = useState<ProcessingConfig>({
@@ -45,11 +48,9 @@ const MainDashboard: React.FC = () => {
     integerColumns: [],
     file: undefined,
     gcsBucket: '',
-    gcsPath: ''
+    gcsPath: '',
+    autoDetectSchema: true,
   });
-
-  // Schema configuration state
-  const [autoDetectSchema, setAutoDetectSchema] = useState(true);
 
   // UI State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -61,9 +62,14 @@ const MainDashboard: React.FC = () => {
     setProcessingConfig((prev) => ({
       ...prev,
       gcpProjectId: config.gcpProjectId || '',
-      targetTable: config.bigQueryDefaultDataset ? `${config.bigQueryDefaultDataset}.processed_data` : ''
+      targetTable: config.bigQueryDefaultDataset ? `${config.bigQueryDefaultDataset}.processed_data` : '',
     }));
-  }, []);
+
+    // Fetch initial jobs
+    if (user) {
+      jobService.getJobs(user.id).then(setJobs);
+    }
+  }, [user]);
 
   // Check authentication status
   useEffect(() => {
@@ -115,21 +121,9 @@ const MainDashboard: React.FC = () => {
 
     try {
       console.log('🚀 Starting job with configuration:', processingConfig);
-      console.log('📋 Schema configuration:', {
-        autoDetectSchema,
-        customSchemaFields: processingConfig.customSchema?.length || 0,
-        customSchema: processingConfig.customSchema
-      });
 
-      // If auto-detect is enabled, clear custom schema
-      const finalConfig = {
-        ...processingConfig,
-        customSchema: autoDetectSchema ? [] : processingConfig.customSchema
-      };
-
-      console.log('🎯 Final config being sent to job service:', finalConfig);
-
-      const job = await jobService.createJob(finalConfig, user.id);
+      const job = await jobService.createJob(processingConfig, user.id);
+      setJobs((prevJobs) => [job, ...prevJobs]); // Add the new job to the list
 
       toast({
         title: "Processing Started! 🚀",
@@ -185,7 +179,7 @@ const MainDashboard: React.FC = () => {
     }
 
     // Schema validation
-    if (!autoDetectSchema && (!processingConfig.customSchema || processingConfig.customSchema.length === 0)) {
+    if (!processingConfig.autoDetectSchema && (!processingConfig.customSchema || processingConfig.customSchema.length === 0)) {
       errors.push('Please define a custom schema or enable auto-detect schema');
     }
 
@@ -429,8 +423,8 @@ const MainDashboard: React.FC = () => {
 
           {/* Schema Configuration */}
           <SchemaDefinition
-            autoDetectSchema={autoDetectSchema}
-            onAutoDetectChange={setAutoDetectSchema}
+            autoDetectSchema={processingConfig.autoDetectSchema}
+            onAutoDetectChange={(value) => setProcessingConfig((prev) => ({ ...prev, autoDetectSchema: value }))}
             customSchema={processingConfig.customSchema || []}
             onCustomSchemaChange={(schema) => setProcessingConfig((prev) => ({
               ...prev,
@@ -440,7 +434,9 @@ const MainDashboard: React.FC = () => {
             onIntegerColumnsChange={(columns) => setProcessingConfig((prev) => ({
               ...prev,
               integerColumns: columns.split('|').filter((col) => col.trim())
-            }))} data-id="86qhkge6c" data-path="src/components/dashboard/MainDashboard.tsx" />
+            }))}
+            disabled={isProcessing}
+          />
 
 
           {/* Process Button */}
@@ -483,7 +479,7 @@ const MainDashboard: React.FC = () => {
 
         {/* Job Status Tab */}
         <TabsContent value="status" data-id="vq7rue4ms" data-path="src/components/dashboard/MainDashboard.tsx">
-          <JobStatus data-id="x732bqyxn" data-path="src/components/dashboard/MainDashboard.tsx" />
+          <JobStatus jobs={jobs} onJobsUpdate={setJobs} />
         </TabsContent>
 
         {/* Diagnostics Tab */}

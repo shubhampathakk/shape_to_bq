@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -50,9 +49,30 @@ export interface ProcessingConfig {
   integerColumns?: string;
 }
 
+export interface ProcessingJob {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  gcsPath: string;
+  schema: any;
+  datasetId: string;
+  tableId: string;
+  status: 'pending' | 'uploading' | 'processing' | 'loading' | 'completed' | 'failed';
+  progress: number;
+  createdAt: Date;
+  lastUpdated: Date;
+  error?: string;
+  bigQueryJobId?: string;
+  recordCount?: number;
+  processedFileUrl?: string;
+  logs: JobLog[];
+  sourceType: 'local' | 'gcs';
+  gcpProjectId: string;
+}
+
 export interface BigQueryJobStatus {
   status: 'PENDING' | 'RUNNING' | 'DONE';
-  errors?: Array<{message: string;reason: string;}>;
+  errors?: Array<{ message: string; reason: string }>;
   statistics?: {
     load?: {
       outputRows: string;

@@ -74,7 +74,6 @@ export class GCSService {
       isAuthenticated: authService.isAuthenticated()
     });
 
-    // Validate inputs
     if (!file) {
       throw new Error('No file provided for upload');
     }
@@ -87,18 +86,15 @@ export class GCSService {
       throw new Error('Cannot upload empty file');
     }
 
-    // Check file size (100MB limit)
     const maxSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSize) {
       throw new Error(`File size (${Math.round(file.size / 1024 / 1024)}MB) exceeds maximum allowed size (100MB)`);
     }
 
-    // Check authentication
     if (!authService.isAuthenticated()) {
       throw new Error('Not authenticated. Please sign in with Google OAuth.');
     }
 
-    // Validate token and scopes
     const validation = await authService.validateToken();
     if (!validation.valid) {
       throw new Error(`Authentication failed: ${validation.error}`);
@@ -114,10 +110,8 @@ export class GCSService {
     const fileName = destinationPath || `uploads/${Date.now()}_${file.name}`;
 
     try {
-      // First, ensure bucket exists (for demo we'll skip this)
       console.log('🪣 Using bucket:', bucket);
 
-      // Upload file using resumable upload
       const uploadResult = await this.performResumableUpload(file, bucket, fileName);
 
       console.log('✅ File upload completed successfully:', uploadResult.gcsUri);
@@ -145,7 +139,6 @@ export class GCSService {
   private async performResumableUpload(file: File, bucket: string, fileName: string): Promise<GCSUploadResult> {
     console.log('🔄 Starting resumable upload...');
 
-    // Validate parameters
     if (!file) {
       throw new Error('File is required for upload');
     }
@@ -162,7 +155,6 @@ export class GCSService {
       throw new Error('File size is undefined');
     }
 
-    // Step 1: Initiate resumable upload
     const initUrl = `${this.uploadUrl}/b/${bucket}/o?uploadType=resumable&name=${encodeURIComponent(fileName)}`;
 
     const initResponse = await this.makeAuthenticatedRequest(initUrl, {
@@ -193,7 +185,6 @@ export class GCSService {
 
     console.log('🔗 Upload URL obtained, uploading file...');
 
-    // Step 2: Upload file content
     const uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
@@ -229,7 +220,6 @@ export class GCSService {
     try {
       console.log('🔍 Testing GCS connection...');
 
-      // Check if authenticated
       if (!authService.isAuthenticated()) {
         return {
           success: false,
@@ -238,7 +228,6 @@ export class GCSService {
         };
       }
 
-      // Validate token
       const validation = await authService.validateToken();
       if (!validation.valid) {
         return {
@@ -248,7 +237,6 @@ export class GCSService {
         };
       }
 
-      // Check required scopes
       const hasScopes = await authService.hasRequiredScopes();
       if (!hasScopes) {
         const missingScopes = await authService.getMissingScopes();
@@ -259,7 +247,6 @@ export class GCSService {
         };
       }
 
-      // Test detailed permissions
       const permissionDetails = await this.testDetailedPermissions();
 
       if (!permissionDetails.hasListPermission) {
@@ -309,7 +296,6 @@ export class GCSService {
     };
 
     try {
-      // Test bucket list permission
       const projectId = configService.getConfig().gcpProjectId || 'demo-project';
       const listResponse = await this.makeAuthenticatedRequest(`${this.baseUrl}/b?project=${projectId}`);
 
@@ -325,8 +311,6 @@ export class GCSService {
       console.log('❌ Storage bucket list permission: ERROR', error);
     }
 
-    // For now, we'll assume read/write permissions based on scopes
-    // In a production environment, you might want to test these against a specific bucket
     const validation = await authService.validateToken();
     if (validation.valid && validation.scopes) {
       const hasStorageScope = validation.scopes.some((scope) =>
@@ -351,23 +335,18 @@ export class GCSService {
       throw new Error('Not authenticated. Please sign in with Google OAuth.');
     }
 
-    // For OAuth, we can't create signed URLs directly
-    // This would typically be done by a backend service
     throw new Error('Signed URL generation requires a backend service with service account credentials');
   }
 
-  // Method to clear cached tokens (useful for logout)
   clearAuthCache(): void {
     authService.clearToken();
     console.log('🧹 GCS authentication cache cleared');
   }
 
-  // Method to check if user is authenticated
   isAuthenticated(): boolean {
     return authService.isAuthenticated();
   }
 
-  // Get authentication status
   getAuthStatus(): {
     isAuthenticated: boolean;
     willExpireSoon: boolean;
@@ -380,12 +359,10 @@ export class GCSService {
     };
   }
 
-  // Get current user for error messages
   getCurrentUser() {
     return authService.getCurrentUser();
   }
 
-  // Get detailed error information for troubleshooting
   async getConnectionDiagnostics(): Promise<{
     isAuthenticated: boolean;
     tokenValid: boolean;

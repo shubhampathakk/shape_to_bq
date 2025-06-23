@@ -135,17 +135,15 @@ export class BigQueryService {
       ...config,
       gcsUri,
       schemaFields: schema?.length || 0,
-      hasSchema: !!schema && schema.length > 0,
-      autoDetect: !schema || schema.length === 0
     });
-
+  
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const url = `${this.baseUrl}/projects/${config.projectId}/jobs`;
-
+  
     const jobConfig: any = {
       jobReference: {
         projectId: config.projectId,
-        jobId: jobId
+        jobId: jobId,
       },
       configuration: {
         load: {
@@ -153,46 +151,38 @@ export class BigQueryService {
           destinationTable: {
             projectId: config.projectId,
             datasetId: config.datasetId,
-            tableId: config.tableId
+            tableId: config.tableId,
           },
           writeDisposition: 'WRITE_TRUNCATE',
           createDisposition: 'CREATE_IF_NEEDED',
-          sourceFormat: 'NEWLINE_DELIMITED_JSON'
-        }
-      }
+          sourceFormat: 'NEWLINE_DELIMITED_JSON',
+          autodetect: !schema, // Autodetect if no schema is provided
+        },
+      },
     };
-
-    // Only add schema if we have fields, otherwise let BigQuery auto-detect
-    if (schema && schema.length > 0) {
-      console.log('📋 Using provided schema with', schema.length, 'fields:', schema);
+  
+    if (schema) {
       jobConfig.configuration.load.schema = {
-        fields: schema.map((field) => ({
-          name: field.name,
-          type: field.type,
-          mode: field.mode || 'NULLABLE'
-        }))
+        fields: schema,
       };
-    } else {
-      console.log('🔍 Using BigQuery auto-detect schema (no custom schema provided)');
-      jobConfig.configuration.load.autodetect = true;
     }
-
+  
     console.log('🎯 Final BigQuery job configuration:', JSON.stringify(jobConfig, null, 2));
-
+  
     try {
       const response = await this.makeAuthenticatedRequest(url, {
         method: 'POST',
-        body: JSON.stringify(jobConfig)
+        body: JSON.stringify(jobConfig),
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         const errorMessage = errorData.error?.message || 'Unknown error';
-
+  
         console.error('❌ BigQuery load job failed:', errorMessage);
         throw new Error(`Failed to start load job: ${errorMessage}`);
       }
-
+  
       const result = await response.json();
       console.log('✅ BigQuery load job started:', jobId);
       return jobId;
